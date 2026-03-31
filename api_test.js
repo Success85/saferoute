@@ -20,7 +20,6 @@
 
 // fetchData();
 
-
 async function fetchData() {
   try {
     const response = await fetch(
@@ -61,4 +60,6 @@ function displayData(data) {
 }
 
 fetchData();
+
+
 alert("hey")

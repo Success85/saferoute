@@ -178,5 +178,3 @@ Open `http://localhost:8080`
 - **Map Tiles**: © [CARTO](https://carto.com) / © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors
 - **Routing**: © [Project OSRM](https://project-osrm.org/)
 - **Geocoding**: © [OpenStreetMap Foundation / Nominatim](https://nominatim.org/)
-
-

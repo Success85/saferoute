@@ -285,26 +285,14 @@ async function fetchCrimes(oLL, dLL) {
     `date_occ >= '2020-01-01T00:00:00'`,
   ].join(' AND ');
 
-  // FIX 1: Build URL as a plain string — NEVER use URLSearchParams for
-  // Socrata $-prefixed params. URLSearchParams encodes $ as %24, so
-  // $where becomes %24where which Socrata ignores → empty result / 403.
-  // The $ characters MUST remain literal in the final URL string.
-  // Only the VALUES (whereClause, selectFields) are encoded.
-  const APP_TOKEN   = 'twFAnZFlGFmESjd8vKBRLpPfEWslzbz34FJsggy3';
-  const selectFields = 'dr_no,date_occ,time_occ,crm_cd_desc,area_name,premis_desc,weapon_desc,vict_sex,vict_age,vict_descent,status_desc,part_1_2,location,lat,lon';
-
-  const url = API_ENDPOINT
-    + '?$$app_token=' + APP_TOKEN
-    + '&$limit=1000'
-    + '&$order=date_occ DESC'
-    + '&$where=' + encodeURIComponent(where)
-    + '&$select=' + encodeURIComponent(selectFields);
+  const url = new URL(API_ENDPOINT);
+  url.searchParams.set('$limit',  '1000');
+  url.searchParams.set('$order',  'date_occ DESC');
+  url.searchParams.set('$where',  where);
+  url.searchParams.set('$select', 'dr_no,date_occ,time_occ,crm_cd_desc,area_name,premis_desc,weapon_desc,vict_sex,vict_age,vict_descent,status_desc,part_1_2,location,lat,lon');
 
   try {
-    const r = await fetch(url, {
-      mode: 'cors',
-      headers: { 'Accept': 'application/json' },
-    });
+    const r = await fetch(url.toString());
     if (!r.ok) {
       const txt = await r.text();
       throw new Error(`API ${r.status}: ${txt.slice(0, 160)}`);
@@ -525,9 +513,7 @@ function renderScoreCard(prefix, res) {
 
   const arc = document.getElementById(`arc-${prefix}`);
   if (arc) {
-    // FIX 2: SVG <path>.className is a read-only SVGAnimatedString getter.
-    // Must use setAttribute('class', ...) — direct assignment throws.
-    arc.setAttribute('class', `arc-fill risk-${cls.replace('b-','')}`);
+    arc.className = `arc-fill risk-${cls.replace('b-','')}`;
     const fill = (score / 100) * ARC_LEN;
     requestAnimationFrame(() => {
       arc.style.strokeDasharray = `${fill} ${ARC_LEN + 10}`;
