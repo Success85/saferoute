@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>LA SafeNav — Crime Intelligence</title>
+  <meta name="description" content="Real-time Los Angeles crime intelligence powered by LAPD open data."/>
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <!-- Routing Machine -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css"/>
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"/>
+  <!-- Fonts: Space Mono (data) + Barlow Condensed (display) + Inter (body) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+
+  <link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+
+  <!-- ░░░ LOADING OVERLAY ░░░ -->
+  <div id="loading-overlay" class="loading-overlay">
+    <div class="loader-wrap">
+      <div class="loader-grid">
+        <span></span><span></span><span></span>
+        <span></span><span></span><span></span>
+        <span></span><span></span><span></span>
+      </div>
+      <p class="loader-label">LAPD CRIME INTELLIGENCE</p>
+      <p id="loader-msg" class="loader-sub">Initializing…</p>
+    </div>
+  </div>
+
+  <!-- ░░░ TOASTS ░░░ -->
+  <div id="toast-container" role="alert" aria-live="assertive"></div>
+
+  <!-- ░░░ HEADER ░░░ -->
+  <header class="header">
+    <div class="header-left">
+      <div class="logo">
+        <i class="fa-solid fa-shield-halved"></i>
+        <div>
+          <span class="logo-name">LA SafeNav</span>
+          <span class="logo-sub">LAPD Crime Intelligence · 2020–2024</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="search-bar-wrap" id="search-bar-wrap">
+      <div class="search-field">
+        <i class="fa-solid fa-location-dot search-icon origin-color"></i>
+        <input type="text" id="origin-input" class="search-input" placeholder="Origin address in Los Angeles…" autocomplete="off" spellcheck="false"/>
+        <button class="gps-btn" id="gps-btn" title="Use my location"><i class="fa-solid fa-crosshairs"></i></button>
+        <div class="suggestion-box" id="origin-sugg"></div>
+      </div>
+
+      <div class="search-swap-btn" id="swap-btn" title="Swap origin/destination">
+        <i class="fa-solid fa-arrow-right-arrow-left"></i>
+      </div>
+
+      <div class="search-field">
+        <i class="fa-solid fa-flag-checkered search-icon dest-color"></i>
+        <input type="text" id="dest-input" class="search-input" placeholder="Destination address in Los Angeles…" autocomplete="off" spellcheck="false"/>
+        <div class="suggestion-box" id="dest-sugg"></div>
+      </div>
+
+      <button class="analyze-btn" id="analyze-btn">
+        <i class="fa-solid fa-magnifying-glass-chart"></i>
+        <span>Analyze</span>
+      </button>
+    </div>
+
+    <div class="header-right">
+      <div class="live-tag">
+        <span class="live-dot"></span>LIVE DATA
+      </div>
+      <button class="theme-btn" id="theme-btn" title="Toggle theme">
+        <i class="fa-solid fa-circle-half-stroke"></i>
+      </button>
+      <button class="mobile-search-btn" id="mobile-search-btn" title="Search">
+        <i class="fa-solid fa-search"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- ░░░ APP BODY ░░░ -->
+  <div class="app-body">
+
+    <!-- MAP SECTION -->
+    <section class="map-section">
+      <div id="map" role="region" aria-label="Los Angeles crime map"></div>
+
+      <!-- Map top controls -->
+      <div class="map-top-bar">
+        <div class="radius-pill">
+          <i class="fa-solid fa-circle-dot"></i>
+          <span>Radius:</span>
+          <input type="range" id="radius-slider" min="0.5" max="5" step="0.5" value="1.5"/>
+          <span id="radius-val" class="mono">1.5 km</span>
+        </div>
+      </div>
+
+      <!-- Map right controls -->
+      <div class="map-controls-right">
+        <button class="mc-btn" id="btn-markers" title="Toggle markers" data-active="true">
+          <i class="fa-solid fa-circle-dot"></i>
+        </button>
+        <button class="mc-btn" id="btn-clusters" title="Toggle cluster view">
+          <i class="fa-solid fa-layer-group"></i>
+        </button>
+        <button class="mc-btn" id="btn-clear" title="Clear route">
+          <i class="fa-solid fa-trash-can"></i>
+        </button>
+        <button class="mc-btn" id="btn-recenter" title="Re-center map">
+          <i class="fa-solid fa-compass"></i>
+        </button>
+      </div>
+
+      <!-- Map attribution -->
+      <div class="map-footer-bar">
+        <i class="fa-solid fa-database"></i>
+        <span id="map-attr-text">Enter origin &amp; destination to fetch live LAPD crime data</span>
+      </div>
+    </section>
+
+    <!-- ANALYSIS DASHBOARD — horizontal on large, stacked on small -->
+    <section class="analysis-section" id="analysis-section" aria-label="Safety analysis dashboard" aria-live="polite">
+
+      <!-- Empty state -->
+      <div class="empty-state" id="empty-state">
+        <i class="fa-solid fa-map-location-dot"></i>
+        <p>Enter an origin and destination above, then click <strong>Analyze</strong> to load live crime intelligence from the LAPD open data portal.</p>
+      </div>
+
+      <!-- Dashboard grid (hidden until analysis runs) -->
+      <div class="dashboard-grid" id="dashboard-grid" hidden>
+
+        <!-- ── CARD 1: Origin Score ── -->
+        <div class="dash-card score-card" id="card-origin">
+          <div class="card-tag origin-color">
+            <i class="fa-solid fa-location-dot"></i> ORIGIN
+          </div>
+          <div class="score-display">
+            <svg class="arc-gauge" viewBox="0 0 120 80" aria-hidden="true">
+              <path class="arc-track" d="M10,75 A55,55 0 0,1 110,75"/>
+              <path class="arc-fill" id="arc-origin" d="M10,75 A55,55 0 0,1 110,75"
+                    stroke-dasharray="0 200" stroke-dashoffset="0"/>
+            </svg>
+            <div class="score-center">
+              <span class="score-num" id="origin-score">—</span>
+              <span class="score-sub">/ 100</span>
+            </div>
+          </div>
+          <div class="risk-badge" id="origin-badge">NO DATA</div>
+          <div class="score-stats">
+            <div class="sstat">
+              <i class="fa-solid fa-triangle-exclamation"></i>
+              <span id="origin-total">— total incidents</span>
+            </div>
+            <div class="sstat">
+              <i class="fa-solid fa-bolt"></i>
+              <span id="origin-violent">— violent crimes</span>
+            </div>
+            <div class="sstat">
+              <i class="fa-solid fa-calendar-week"></i>
+              <span id="origin-recent">— in last 90 days</span>
+            </div>
+            <div class="sstat">
+              <i class="fa-solid fa-map-pin"></i>
+              <span id="origin-area">— area</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── CARD 2: Route Overview ── -->
+        <div class="dash-card route-card" id="card-route">
+          <div class="card-tag route-color">
+            <i class="fa-solid fa-route"></i> ROUTE SUMMARY
+          </div>
+          <div class="route-score-big">
+            <span class="route-num" id="route-score">—</span>
+            <span class="route-label">/100</span>
+          </div>
+          <div class="risk-badge" id="route-badge">NO DATA</div>
+          <div class="route-bar-wrap">
+            <div class="route-bar-track">
+              <div class="route-bar-fill" id="route-bar-fill"></div>
+            </div>
+            <div class="route-bar-labels">
+              <span>High Risk</span><span>Safe</span>
+            </div>
+          </div>
+          <div class="route-meta">
+            <div class="rmeta-item">
+              <i class="fa-solid fa-road"></i>
+              <span id="route-dist">—</span>
+            </div>
+            <div class="rmeta-item">
+              <i class="fa-solid fa-clock"></i>
+              <span id="route-time">—</span>
+            </div>
+            <div class="rmeta-item">
+              <i class="fa-solid fa-circle-exclamation"></i>
+              <span id="route-incidents">—</span>
+            </div>
+            <div class="rmeta-item">
+              <i class="fa-solid fa-calendar-days"></i>
+              <span id="route-period">—</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── CARD 3: Destination Score ── -->
+        <div class="dash-card score-card" id="card-dest">
+          <div class="card-tag dest-color">
+            <i class="fa-solid fa-flag-checkered"></i> DESTINATION
+          </div>
+          <div class="score-display">
+            <svg class="arc-gauge" viewBox="0 0 120 80" aria-hidden="true">
+              <path class="arc-track" d="M10,75 A55,55 0 0,1 110,75"/>
+              <path class="arc-fill" id="arc-dest" d="M10,75 A55,55 0 0,1 110,75"
+                    stroke-dasharray="0 200" stroke-dashoffset="0"/>
+            </svg>
+            <div class="score-center">
+              <span class="score-num" id="dest-score">—</span>
+              <span class="score-sub">/ 100</span>
+            </div>
+          </div>
+          <div class="risk-badge" id="dest-badge">NO DATA</div>
+          <div class="score-stats">
+            <div class="sstat">
+              <i class="fa-solid fa-triangle-exclamation"></i>
+              <span id="dest-total">— total incidents</span>
+            </div>
+            <div class="sstat">
+              <i class="fa-solid fa-bolt"></i>
+              <span id="dest-violent">— violent crimes</span>
+            </div>
+            <div class="sstat">
+              <i class="fa-solid fa-calendar-week"></i>
+              <span id="dest-recent">— in last 90 days</span>
+            </div>
+            <div class="sstat">
+              <i class="fa-solid fa-map-pin"></i>
+              <span id="dest-area">— area</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── CARD 4: Crime Breakdown ── -->
+        <div class="dash-card breakdown-card" id="card-breakdown">
+          <div class="card-tag">
+            <i class="fa-solid fa-chart-bar"></i> CRIME BREAKDOWN
+          </div>
+          <div class="breakdown-list" id="breakdown-list">
+            <p class="no-data-note">No data yet</p>
+          </div>
+        </div>
+
+        <!-- ── CARD 5: Victim Demographics ── -->
+        <div class="dash-card demo-card" id="card-demo">
+          <div class="card-tag">
+            <i class="fa-solid fa-users"></i> VICTIM DEMOGRAPHICS
+          </div>
+          <div class="demo-grid">
+            <div class="demo-section">
+              <div class="demo-label">GENDER</div>
+              <div class="demo-bars" id="gender-bars"></div>
+            </div>
+            <div class="demo-section">
+              <div class="demo-label">AGE GROUP</div>
+              <div class="demo-bars" id="age-bars"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── CARD 6: Recent Incidents ── -->
+        <div class="dash-card incidents-card" id="card-incidents">
+          <div class="card-tag">
+            <i class="fa-solid fa-list-ul"></i> RECENT INCIDENTS
+            <span class="incidents-filter">
+              <select id="filter-type" class="filter-sel">
+                <option value="all">All Types</option>
+                <option value="violent">Violent Only</option>
+                <option value="property">Property Only</option>
+              </select>
+            </span>
+          </div>
+          <div class="incidents-list" id="incidents-list">
+            <p class="no-data-note">No incidents loaded</p>
+          </div>
+        </div>
+
+        <!-- ── CARD 7: Weapons Used ── -->
+        <div class="dash-card weapons-card" id="card-weapons">
+          <div class="card-tag">
+            <i class="fa-solid fa-gun"></i> WEAPONS USED
+          </div>
+          <div class="weapons-list" id="weapons-list">
+            <p class="no-data-note">No data yet</p>
+          </div>
+        </div>
+
+        <!-- ── CARD 8: Area / District Info ── -->
+        <div class="dash-card area-card" id="card-area">
+          <div class="card-tag">
+            <i class="fa-solid fa-building-shield"></i> LAPD DISTRICTS
+          </div>
+          <div class="area-list" id="area-list">
+            <p class="no-data-note">No data yet</p>
+          </div>
+        </div>
+
+      </div><!-- /dashboard-grid -->
+    </section><!-- /analysis-section -->
+
+  </div><!-- /app-body -->
+
+  <!-- ░░░ SCRIPTS ░░░ -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
