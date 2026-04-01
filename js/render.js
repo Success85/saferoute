@@ -56,7 +56,7 @@ function renderBadge(id, risk) {
 function renderRouteFacts(km, min, total, period) {
   setText('rt-dist', km    ? `${km} km`       : '—');
   setText('rt-time', min   ? `${min} min`     : '—');
-  setText('rt-tot',  total ? `${total} total` : '—');
+  setText('rt-tot',  total ? `incidents in corridor` : '—');
   setText('rt-per',  period || '—');
 }
 
@@ -207,10 +207,11 @@ function renderDistricts(crimes) {
       <div class="bl">${xss(area)}</div>
       <div class="bt"><div class="bf" style="width:${Math.round(vr*100)}%;background:#ff3b30"></div></div>
       <div class="bn">${n}</div>
-      <span class="sc-badge ${risk.css}" style="font-size:.58rem;padding:1px 5px;margin-left:5px">${vr>.2?'HIGH':vr>.08?'MOD':'LOW'}</span>
     </div>`;
   }).join('');
 }
+
+      // <span class="sc-badge ${risk.css}" style="font-size:.58rem;padding:1px 5px;margin-left:5px">${vr>.2?'HIGH':vr>.08?'MOD':'LOW'}</span>
 
 /* ── TIPS ─────────────────────────────────────────────────────── */
 function renderTips(tips) {
@@ -286,7 +287,7 @@ function renderRoutes(rtScore, crimes, km, min) {
       <div class="ro-score" style="color:${rl.color}">${rtScore}</div>
       <div class="ro-body">
         <div class="ro-name">🟢 Recommended Route (Your selected route)</div>
-        <div class="ro-detail">${km!=='—'?km+' km':''} ${min!=='—'?'· '+min+' min':''} · ${crimes.length} incidents in corridor</div>
+        <div class="ro-detail">${km!=='—'?km+' km':''} ${min!=='—'?'· '+min+' min':''}</div>
       </div>
       <span class="sc-badge ${rl.css}">${rl.label}</span>
     </div>

@@ -1,377 +1,477 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
+
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
   <title>SafeRoute LA — Crime Intelligence Platform</title>
-  <meta name="description" content="Real-time Los Angeles route safety powered by LAPD crime data 2020–2024."/>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"/>
-  <link rel="preconnect" href="https://fonts.googleapis.com"/>
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
-  <link rel="stylesheet" href="css/style.css"/>
+  <meta name="description" content="Real-time Los Angeles route safety powered by LAPD crime data 2020–2024." />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
 </head>
+
 <body>
 
-<!-- BOOT LOADER -->
-<div id="boot-screen" class="boot-screen">
-  <div class="boot-inner">
-    <div class="boot-logo">
-      <div class="boot-icon"><i class="fa-solid fa-shield-halved"></i></div>
-      <div>
-        <div class="boot-title">SAFEROUTE <span>LA</span></div>
-        <div class="boot-sub">CRIME INTELLIGENCE PLATFORM</div>
+  <!-- BOOT LOADER -->
+  <div id="boot-screen" class="boot-screen">
+    <div class="boot-inner">
+      <div class="boot-logo">
+        <div class="boot-icon"><i class="fa-solid fa-shield-halved"></i></div>
+        <div>
+          <div class="boot-title">SAFEROUTE <span>LA</span></div>
+          <div class="boot-sub">CRIME INTELLIGENCE PLATFORM</div>
+        </div>
       </div>
-    </div>
-    <div class="boot-progress">
-      <div class="boot-track"><div id="boot-fill" class="boot-fill"></div></div>
-      <span id="boot-msg" class="boot-msg">Initializing…</span>
+      <div class="boot-progress">
+        <div class="boot-track">
+          <div id="boot-fill" class="boot-fill"></div>
+        </div>
+        <span id="boot-msg" class="boot-msg">Initializing…</span>
+      </div>
     </div>
   </div>
-</div>
 
-<!-- AUTH MODAL -->
-<div id="auth-overlay" class="auth-overlay" style="display:none">
-  <div class="auth-card">
-    <div class="auth-hdr">
-      <div class="auth-icon"><i class="fa-solid fa-shield-halved"></i></div>
-      <h2>SAFEROUTE <span>LA</span></h2>
-      <p>Crime Intelligence Platform</p>
-    </div>
-    <div class="auth-tabs">
-      <button class="atab active" id="atab-login" onclick="switchAuthTab('login')">Sign In</button>
-      <button class="atab" id="atab-signup" onclick="switchAuthTab('signup')">Register</button>
-    </div>
-    <!-- LOGIN -->
-    <form id="form-login" class="auth-form active" onsubmit="doLogin(event)" novalidate>
-      <div class="fg"><label>Email</label>
-        <div class="fw"><i class="fa-solid fa-envelope"></i>
-          <input type="email" id="l-email" placeholder="you@example.com" autocomplete="email"/>
-        </div><span class="ferr" id="l-email-err"></span></div>
-      <div class="fg"><label>Password</label>
-        <div class="fw"><i class="fa-solid fa-lock"></i>
-          <input type="password" id="l-pass" placeholder="••••••••" autocomplete="current-password"/>
-          <button type="button" class="eye-tog" onclick="togglePw('l-pass',this)"><i class="fa-solid fa-eye"></i></button>
-        </div><span class="ferr" id="l-pass-err"></span></div>
-      <div class="ferr fg-err" id="l-err"></div>
-      <button type="submit" class="auth-btn" id="l-btn"><span>ACCESS SYSTEM</span><i class="fa-solid fa-circle-notch fa-spin" style="display:none"></i></button>
-      <button type="button" class="guest-btn" onclick="guestAccess()"><i class="fa-solid fa-user-secret"></i> Continue as Guest</button>
-    </form>
-    <!-- REGISTER -->
-    <form id="form-signup" class="auth-form" onsubmit="doRegister(event)" novalidate>
-      <div class="frow">
-        <div class="fg"><label>First Name</label>
-          <div class="fw"><i class="fa-solid fa-user"></i><input type="text" id="r-first" placeholder="Jane"/></div>
-          <span class="ferr" id="r-first-err"></span></div>
-        <div class="fg"><label>Last Name</label>
-          <div class="fw"><input type="text" id="r-last" placeholder="Doe"/></div>
-          <span class="ferr" id="r-last-err"></span></div>
+  <!-- AUTH MODAL -->
+  <div id="auth-overlay" class="auth-overlay" style="display:none">
+    <div class="auth-card">
+      <div class="auth-hdr">
+        <div class="auth-icon"><i class="fa-solid fa-shield-halved"></i></div>
+        <h2>SAFEROUTE <span>LA</span></h2>
+        <p>Crime Intelligence Platform</p>
       </div>
-      <div class="fg"><label>Email</label>
-        <div class="fw"><i class="fa-solid fa-envelope"></i><input type="email" id="r-email" placeholder="you@example.com"/></div>
-        <span class="ferr" id="r-email-err"></span></div>
-      <div class="fg"><label>Password</label>
-        <div class="fw"><i class="fa-solid fa-lock"></i>
-          <input type="password" id="r-pass" placeholder="Min. 8 characters" oninput="pwStrength(this.value)"/>
-          <button type="button" class="eye-tog" onclick="togglePw('r-pass',this)"><i class="fa-solid fa-eye"></i></button>
-        </div><span class="ferr" id="r-pass-err"></span>
-        <div class="pw-str" id="pw-str" style="display:none"><div class="pw-track"><div id="pw-bar"></div></div><span id="pw-lbl"></span></div>
+      <div class="auth-tabs">
+        <button class="atab active" id="atab-login" onclick="switchAuthTab('login')">Sign In</button>
+        <button class="atab" id="atab-signup" onclick="switchAuthTab('signup')">Register</button>
       </div>
-      <div class="fg"><label>Confirm Password</label>
-        <div class="fw"><i class="fa-solid fa-lock"></i>
-          <input type="password" id="r-confirm" placeholder="Repeat password"/>
-          <button type="button" class="eye-tog" onclick="togglePw('r-confirm',this)"><i class="fa-solid fa-eye"></i></button>
-        </div><span class="ferr" id="r-confirm-err"></span></div>
-      <div class="ferr fg-err" id="r-err"></div>
-      <button type="submit" class="auth-btn" id="r-btn"><span>CREATE ACCOUNT</span><i class="fa-solid fa-circle-notch fa-spin" style="display:none"></i></button>
-      <button type="button" class="guest-btn" onclick="guestAccess()"><i class="fa-solid fa-user-secret"></i> Continue as Guest</button>
-    </form>
+      <!-- LOGIN -->
+      <form id="form-login" class="auth-form active" onsubmit="doLogin(event)" novalidate>
+        <div class="fg"><label>Email</label>
+          <div class="fw"><i class="fa-solid fa-envelope"></i>
+            <input type="email" id="l-email" placeholder="you@example.com" autocomplete="email" />
+          </div><span class="ferr" id="l-email-err"></span>
+        </div>
+        <div class="fg"><label>Password</label>
+          <div class="fw"><i class="fa-solid fa-lock"></i>
+            <input type="password" id="l-pass" placeholder="••••••••" autocomplete="current-password" />
+            <button type="button" class="eye-tog" onclick="togglePw('l-pass',this)"><i
+                class="fa-solid fa-eye"></i></button>
+          </div><span class="ferr" id="l-pass-err"></span>
+        </div>
+        <div class="ferr fg-err" id="l-err"></div>
+        <button type="submit" class="auth-btn" id="l-btn"><span>ACCESS SYSTEM</span><i
+            class="fa-solid fa-circle-notch fa-spin" style="display:none"></i></button>
+        <button type="button" class="guest-btn" onclick="guestAccess()"><i class="fa-solid fa-user-secret"></i> Continue
+          as Guest</button>
+      </form>
+      <!-- REGISTER -->
+      <form id="form-signup" class="auth-form" onsubmit="doRegister(event)" novalidate>
+        <div class="frow">
+          <div class="fg"><label>First Name</label>
+            <div class="fw"><i class="fa-solid fa-user"></i><input type="text" id="r-first" placeholder="Jane" /></div>
+            <span class="ferr" id="r-first-err"></span>
+          </div>
+          <div class="fg"><label>Last Name</label>
+            <div class="fw"><input type="text" id="r-last" placeholder="Doe" /></div>
+            <span class="ferr" id="r-last-err"></span>
+          </div>
+        </div>
+        <div class="fg"><label>Email</label>
+          <div class="fw"><i class="fa-solid fa-envelope"></i><input type="email" id="r-email"
+              placeholder="you@example.com" /></div>
+          <span class="ferr" id="r-email-err"></span>
+        </div>
+        <div class="fg"><label>Password</label>
+          <div class="fw"><i class="fa-solid fa-lock"></i>
+            <input type="password" id="r-pass" placeholder="Min. 8 characters" oninput="pwStrength(this.value)" />
+            <button type="button" class="eye-tog" onclick="togglePw('r-pass',this)"><i
+                class="fa-solid fa-eye"></i></button>
+          </div><span class="ferr" id="r-pass-err"></span>
+          <div class="pw-str" id="pw-str" style="display:none">
+            <div class="pw-track">
+              <div id="pw-bar"></div>
+            </div><span id="pw-lbl"></span>
+          </div>
+        </div>
+        <div class="fg"><label>Confirm Password</label>
+          <div class="fw"><i class="fa-solid fa-lock"></i>
+            <input type="password" id="r-confirm" placeholder="Repeat password" />
+            <button type="button" class="eye-tog" onclick="togglePw('r-confirm',this)"><i
+                class="fa-solid fa-eye"></i></button>
+          </div><span class="ferr" id="r-confirm-err"></span>
+        </div>
+        <div class="ferr fg-err" id="r-err"></div>
+        <button type="submit" class="auth-btn" id="r-btn"><span>CREATE ACCOUNT</span><i
+            class="fa-solid fa-circle-notch fa-spin" style="display:none"></i></button>
+        <button type="button" class="guest-btn" onclick="guestAccess()"><i class="fa-solid fa-user-secret"></i> Continue
+          as Guest</button>
+      </form>
+    </div>
   </div>
-</div>
 
-<!-- TOASTS -->
-<div id="toasts"></div>
+  <!-- TOASTS -->
+  <div id="toasts"></div>
 
-<!-- GLOBAL LOADER -->
-<div id="g-loader" class="g-loader" style="display:none">
-  <div class="gl-ring"></div>
-  <p id="g-loader-msg">Loading…</p>
-</div>
+  <!-- GLOBAL LOADER -->
+  <div id="g-loader" class="g-loader" style="display:none">
+    <div class="gl-ring"></div>
+    <p id="g-loader-msg">Loading…</p>
+  </div>
 
-<!-- HEADER -->
-<header class="hdr" id="hdr">
-  <div class="hdr-inner">
-    <div class="hdr-brand">
-      <i class="fa-solid fa-shield-halved"></i>
-      <div>
-        <div class="brand-n">SAFEROUTE<span>LA</span></div>
-        <div class="brand-s">CRIME INTELLIGENCE</div>
+  <!-- HEADER -->
+  <header class="hdr" id="hdr">
+    <div class="hdr-inner">
+      <div class="hdr-brand">
+        <i class="fa-solid fa-shield-halved"></i>
+        <div>
+          <div class="brand-n">SAFEROUTE<span>LA</span></div>
+          <div class="brand-s">CRIME INTELLIGENCE</div>
+        </div>
       </div>
-    </div>
 
-    <!-- Desktop search bar -->
-    <div class="sbar" id="desktop-sbar">
-      <div class="sf" id="sf-o">
-        <span class="sdot od"></span>
-        <input type="text" id="o-inp" class="sinp" placeholder="Origin — type or tap map…" autocomplete="off" spellcheck="false"/>
-        <button class="gps-b" id="gps-btn" title="GPS"><i class="fa-solid fa-location-crosshairs"></i></button>
-        <div class="sdrop" id="o-drop"></div>
-      </div>
-      <button class="swap-b" onclick="swapInputs()" title="Swap"><i class="fa-solid fa-arrows-up-down"></i></button>
-      <div class="sf" id="sf-d">
-        <span class="sdot dd"></span>
-        <input type="text" id="d-inp" class="sinp" placeholder="Destination…" autocomplete="off" spellcheck="false"/>
-        <div class="sdrop" id="d-drop"></div>
-      </div>
-      <button class="analyze-b" id="analyze-btn" onclick="runAnalysis()">
-        <i class="fa-solid fa-shield-halved"></i><span>ANALYZE</span>
-      </button>
-    </div>
-
-    <div class="hdr-right">
-      <div class="live-tag"><span></span>LAPD LIVE</div>
-      <button class="icon-b" onclick="toggleTheme()"><i class="fa-solid fa-circle-half-stroke"></i></button>
-      <div class="user-wrap" id="user-wrap">
-        <button class="user-chip" onclick="toggleUserMenu()">
-          <div class="u-av" id="u-av">G</div>
-          <span id="u-nm">Guest</span>
-          <i class="fa-solid fa-chevron-down"></i>
+      <!-- Desktop search bar -->
+      <div class="sbar" id="desktop-sbar">
+        <div class="sf" id="sf-o">
+          <span class="sdot od"></span>
+          <input type="text" id="o-inp" class="sinp" placeholder="Origin — type or tap map…" autocomplete="off"
+            spellcheck="false" />
+          <button class="gps-b" id="gps-btn" title="GPS"><i class="fa-solid fa-location-crosshairs"></i></button>
+          <div class="sdrop" id="o-drop"></div>
+        </div>
+        <button class="swap-b" onclick="swapInputs()" title="Swap"><i class="fa-solid fa-arrows-up-down"></i></button>
+        <div class="sf" id="sf-d">
+          <span class="sdot dd"></span>
+          <input type="text" id="d-inp" class="sinp" placeholder="Destination…" autocomplete="off" spellcheck="false" />
+          <div class="sdrop" id="d-drop"></div>
+        </div>
+        <button class="analyze-b" id="analyze-btn" onclick="runAnalysis()">
+          <i class="fa-solid fa-shield-halved"></i><span>ANALYZE</span>
         </button>
-        <div class="user-dd" id="user-dd">
-          <div class="udd-top">
-            <div class="udd-av" id="udd-av">G</div>
-            <div><div class="udd-name" id="udd-name">Guest</div><div class="udd-email" id="udd-email">guest@saferoute.la</div></div>
+      </div>
+
+      <div class="hdr-right">
+        <div class="live-tag"><span></span>LAPD LIVE</div>
+        <button class="icon-b" onclick="toggleTheme()"><i class="fa-solid fa-circle-half-stroke"></i></button>
+        <div class="user-wrap" id="user-wrap">
+          <button class="user-chip" onclick="toggleUserMenu()">
+            <div class="u-av" id="u-av">G</div>
+            <span id="u-nm">Guest</span>
+            <i class="fa-solid fa-chevron-down"></i>
+          </button>
+          <div class="user-dd" id="user-dd">
+            <div class="udd-top">
+              <div class="udd-av" id="udd-av">G</div>
+              <div>
+                <div class="udd-name" id="udd-name">Guest</div>
+                <div class="udd-email" id="udd-email">guest@saferoute.la</div>
+              </div>
+            </div>
+            <div class="udd-sep"></div>
+            <button class="udd-item" onclick="switchPanel('saved');closeUserMenu()"><i
+                class="fa-solid fa-bookmark"></i>Saved Routes</button>
+            <button class="udd-item" onclick="toast('Settings coming soon','info');closeUserMenu()"><i
+                class="fa-solid fa-gear"></i>Settings</button>
+            <div class="udd-sep"></div>
+            <button class="udd-item logout" onclick="doLogout()"><i class="fa-solid fa-right-from-bracket"></i>Sign
+              Out</button>
           </div>
-          <div class="udd-sep"></div>
-          <button class="udd-item" onclick="switchPanel('saved');closeUserMenu()"><i class="fa-solid fa-bookmark"></i>Saved Routes</button>
-          <button class="udd-item" onclick="toast('Settings coming soon','info');closeUserMenu()"><i class="fa-solid fa-gear"></i>Settings</button>
-          <div class="udd-sep"></div>
-          <button class="udd-item logout" onclick="doLogout()"><i class="fa-solid fa-right-from-bracket"></i>Sign Out</button>
+        </div>
+        <button class="ham-b" id="ham-b" onclick="toggleMob()"><span></span><span></span><span></span></button>
+      </div>
+    </div>
+
+    <!-- Mobile dropdown -->
+    <div class="mob-panel" id="mob-panel">
+      <div class="mob-s">
+        <div class="sf"><span class="sdot od"></span>
+          <input type="text" id="mo-inp" class="sinp" placeholder="Origin…" autocomplete="off" />
+          <div class="sdrop" id="mo-drop"></div>
+        </div>
+        <div class="sf" style="margin-top:8px"><span class="sdot dd"></span>
+          <input type="text" id="md-inp" class="sinp" placeholder="Destination…" autocomplete="off" />
+          <div class="sdrop" id="md-drop"></div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button class="analyze-b" style="flex:1" onclick="syncMob();runAnalysis();toggleMob()"><i
+              class="fa-solid fa-shield-halved"></i> ANALYZE</button>
+          <button class="icon-b" onclick="useGPS()"><i class="fa-solid fa-location-crosshairs"></i></button>
         </div>
       </div>
-      <button class="ham-b" id="ham-b" onclick="toggleMob()"><span></span><span></span><span></span></button>
+      <nav class="mob-nav">
+        <a onclick="switchPanel('dashboard');toggleMob()"><i class="fa-solid fa-chart-line"></i>Dashboard</a>
+        <a onclick="switchPanel('incidents');toggleMob()"><i class="fa-solid fa-list"></i>Incidents</a>
+        <a onclick="switchPanel('routes');toggleMob()"><i class="fa-solid fa-route"></i>Routes</a>
+        <a onclick="switchPanel('saved');toggleMob()"><i class="fa-solid fa-bookmark"></i>Saved</a>
+        <a onclick="toggleTheme()"><i class="fa-solid fa-circle-half-stroke"></i>Toggle Theme</a>
+        <a onclick="doLogout()"><i class="fa-solid fa-right-from-bracket"></i>Sign Out</a>
+      </nav>
     </div>
-  </div>
+  </header>
 
-  <!-- Mobile dropdown -->
-  <div class="mob-panel" id="mob-panel">
-    <div class="mob-s">
-      <div class="sf"><span class="sdot od"></span>
-        <input type="text" id="mo-inp" class="sinp" placeholder="Origin…" autocomplete="off"/>
-        <div class="sdrop" id="mo-drop"></div></div>
-      <div class="sf" style="margin-top:8px"><span class="sdot dd"></span>
-        <input type="text" id="md-inp" class="sinp" placeholder="Destination…" autocomplete="off"/>
-        <div class="sdrop" id="md-drop"></div></div>
-      <div style="display:flex;gap:8px;margin-top:10px">
-        <button class="analyze-b" style="flex:1" onclick="syncMob();runAnalysis();toggleMob()"><i class="fa-solid fa-shield-halved"></i> ANALYZE</button>
-        <button class="icon-b" onclick="useGPS()"><i class="fa-solid fa-location-crosshairs"></i></button>
-      </div>
-    </div>
-    <nav class="mob-nav">
-      <a onclick="switchPanel('dashboard');toggleMob()"><i class="fa-solid fa-chart-line"></i>Dashboard</a>
-      <a onclick="switchPanel('incidents');toggleMob()"><i class="fa-solid fa-list"></i>Incidents</a>
-      <a onclick="switchPanel('routes');toggleMob()"><i class="fa-solid fa-route"></i>Routes</a>
-      <a onclick="switchPanel('saved');toggleMob()"><i class="fa-solid fa-bookmark"></i>Saved</a>
-      <a onclick="toggleTheme()"><i class="fa-solid fa-circle-half-stroke"></i>Toggle Theme</a>
-      <a onclick="doLogout()"><i class="fa-solid fa-right-from-bracket"></i>Sign Out</a>
-    </nav>
-  </div>
-</header>
+  <!-- MAIN LAYOUT -->
+  <main class="main-layout">
 
-<!-- MAIN LAYOUT -->
-<main class="main-layout">
+    <!-- MAP SIDE -->
+    <section class="map-side">
+      <div id="map"></div>
 
-  <!-- MAP SIDE -->
-  <section class="map-side">
-    <div id="map"></div>
-
-    <!-- Start hint -->
-    <div class="map-hint" id="map-hint">
-      <div class="mh-box">
-        <i class="fa-solid fa-hand-pointer"></i>
-        <strong>TAP MAP TWICE</strong>
-        <p>1st tap = Origin &nbsp;·&nbsp; 2nd tap = Destination</p>
-        <div class="mh-legend">
-          <span style="color:#ff3b30">● Violent</span>
-          <span style="color:#ff9500">● Property</span>
-          <span style="color:#5856d6">● Other</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Map controls -->
-    <div class="map-ctrl-bar">
-      <div class="radius-pill">
-        <i class="fa-solid fa-expand-arrows-alt"></i>
-        <span>Radius</span>
-        <input type="range" id="r-sl" min="0.5" max="5" step="0.5" value="1.5" oninput="updateRadius(this.value)"/>
-        <span id="r-lbl" class="mono">1.5km</span>
-      </div>
-    </div>
-    <div class="map-fab-col">
-      <button class="fab" id="fab-markers" onclick="toggleMarkers()" title="Toggle markers"><i class="fa-solid fa-location-dot"></i></button>
-      <button class="fab" onclick="clearAll()" title="Clear all"><i class="fa-solid fa-trash-can"></i></button>
-      <button class="fab" onclick="recenter()" title="Recenter"><i class="fa-solid fa-compass"></i></button>
-      <button class="fab" onclick="saveRoute()" title="Save route"><i class="fa-regular fa-bookmark"></i></button>
-    </div>
-    <div class="map-footer-bar">
-      <i class="fa-solid fa-database"></i>
-      <span id="map-status">Enter locations or tap the map — LAPD 2020–2024</span>
-    </div>
-  </section>
-
-  <!-- PANEL SIDE -->
-  <section class="panel-side">
-
-    <!-- Tabs -->
-    <nav class="panel-tabs">
-      <button class="ptab active" id="ptab-dashboard" onclick="switchPanel('dashboard')"><i class="fa-solid fa-chart-line"></i><span>Dashboard</span></button>
-      <button class="ptab" id="ptab-incidents" onclick="switchPanel('incidents')"><i class="fa-solid fa-list"></i><span>Incidents</span></button>
-      <button class="ptab" id="ptab-routes" onclick="switchPanel('routes')"><i class="fa-solid fa-route"></i><span>Routes</span></button>
-      <button class="ptab" id="ptab-saved" onclick="switchPanel('saved')"><i class="fa-solid fa-bookmark"></i><span>Saved</span></button>
-    </nav>
-
-    <!-- Panel content -->
-    <div class="panel-scroll" id="panel-scroll">
-
-      <!-- EMPTY -->
-      <div id="p-empty" class="p-empty">
-        <div class="pe-icon"><i class="fa-solid fa-shield-halved"></i></div>
-        <h3>START AN ANALYSIS</h3>
-        <p>Enter origin and destination above, or tap the map twice, then click <strong>ANALYZE</strong> to get real-time LAPD crime intelligence.</p>
-        <div class="pe-steps">
-          <div><span>01</span><p>Set locations</p></div>
-          <div><span>02</span><p>Click Analyze</p></div>
-          <div><span>03</span><p>Review scores</p></div>
+      <!-- Start hint -->
+      <div class="map-hint" id="map-hint">
+        <div class="mh-box">
+          <i class="fa-solid fa-hand-pointer"></i>
+          <strong>TAP MAP TWICE</strong>
+          <p>1st tap = Origin &nbsp;·&nbsp; 2nd tap = Destination</p>
+          <div class="mh-legend">
+            <span style="color:#ff3b30">● Violent</span>
+            <span style="color:#ff9500">● Property</span>
+            <span style="color:#5856d6">● Other</span>
+          </div>
         </div>
       </div>
 
-      <!-- ── DASHBOARD ── -->
-      <div id="p-dashboard" style="display:none">
+      <!-- Map controls -->
+      <div class="map-ctrl-bar">
+        <div class="radius-pill">
+          <i class="fa-solid fa-expand-arrows-alt"></i>
+          <span>Radius</span>
+          <input type="range" id="r-sl" min="0.5" max="5" step="0.5" value="1.5" oninput="updateRadius(this.value)" />
+          <span id="r-lbl" class="mono">1.5km</span>
+        </div>
+      </div>
+      <div class="map-fab-col">
+        <button class="fab" id="fab-markers" onclick="toggleMarkers()" title="Toggle markers"><i
+            class="fa-solid fa-location-dot"></i></button>
+        <button class="fab" onclick="clearAll()" title="Clear all"><i class="fa-solid fa-trash-can"></i></button>
+        <button class="fab" onclick="recenter()" title="Recenter"><i class="fa-solid fa-compass"></i></button>
+        <button class="fab" onclick="saveRoute()" title="Save route"><i class="fa-regular fa-bookmark"></i></button>
+      </div>
+      <div class="map-footer-bar">
+        <i class="fa-solid fa-database"></i>
+        <span id="map-status">Enter locations or tap the map — LAPD 2020–2024</span>
+      </div>
+    </section>
 
-        <div class="score-row">
-          <!-- Origin card -->
-          <div class="sc-card" id="sc-o">
-            <div class="sc-tag otag">ORIGIN</div>
-            <div class="sc-place" id="sco-place">—</div>
-            <div class="arc-wrap">
-              <svg viewBox="0 0 120 80" class="arc-svg">
-                <path class="arc-track" d="M10,75 A50,50 0 0,1 110,75"/>
-                <path class="arc-fill" id="arc-o" d="M10,75 A50,50 0 0,1 110,75" stroke-dasharray="0 200"/>
-              </svg>
-              <div class="arc-val"><span id="n-o">—</span><sub>/100</sub></div>
-            </div>
-            <div class="sc-badge" id="b-o">NO DATA</div>
-            <div class="sc-mini-stats">
-              <div><i class="fa-solid fa-exclamation-triangle"></i><span id="o-tot">—</span></div>
-              <div><i class="fa-solid fa-bolt"></i><span id="o-vio">—</span></div>
-              <div><i class="fa-solid fa-building-shield"></i><span id="o-area">—</span></div>
-            </div>
-          </div>
+    <!-- PANEL SIDE -->
+    <section class="panel-side">
 
-          <!-- Route card -->
-          <div class="rt-card" id="rt-c">
-            <div class="sc-tag rtag">ROUTE</div>
-            <div class="rt-num" id="n-r">—</div><sub class="rt-sub">/100</sub>
-            <div class="sc-badge big" id="b-r">NO DATA</div>
-            <div class="rt-bar-wrap">
-              <div class="rt-track"><div class="rt-fill" id="rt-fill"></div></div>
-              <div class="rt-labs"><span>DANGER</span><span>SAFE</span></div>
-            </div>
-            <div class="rt-stats">
-              <div><i class="fa-solid fa-road"></i><span id="rt-dist">—</span></div>
-              <div><i class="fa-solid fa-clock"></i><span id="rt-time">—</span></div>
-              <div><i class="fa-solid fa-triangle-exclamation"></i><span id="rt-tot">—</span></div>
-              <div><i class="fa-solid fa-calendar-days"></i><span id="rt-per">—</span></div>
-            </div>
-          </div>
+      <!-- Tabs -->
+      <nav class="panel-tabs">
+        <button class="ptab active" id="ptab-dashboard" onclick="switchPanel('dashboard')"><i
+            class="fa-solid fa-chart-line"></i><span>Dashboard</span></button>
+        <button class="ptab" id="ptab-incidents" onclick="switchPanel('incidents')"><i
+            class="fa-solid fa-list"></i><span>Incidents</span></button>
+        <button class="ptab" id="ptab-routes" onclick="switchPanel('routes')"><i
+            class="fa-solid fa-route"></i><span>Routes</span></button>
+        <button class="ptab" id="ptab-saved" onclick="switchPanel('saved')"><i
+            class="fa-solid fa-bookmark"></i><span>Saved</span></button>
+      </nav>
 
-          <!-- Destination card -->
-          <div class="sc-card" id="sc-d">
-            <div class="sc-tag dtag">DEST</div>
-            <div class="sc-place" id="scd-place">—</div>
-            <div class="arc-wrap">
-              <svg viewBox="0 0 120 80" class="arc-svg">
-                <path class="arc-track" d="M10,75 A50,50 0 0,1 110,75"/>
-                <path class="arc-fill" id="arc-d" d="M10,75 A50,50 0 0,1 125,75" stroke-dasharray="0 200"/>
-              </svg>
-              <div class="arc-val"><span id="n-d">—</span><sub>/100</sub></div>
+      <!-- Panel content -->
+      <div class="panel-scroll" id="panel-scroll">
+
+        <!-- EMPTY -->
+        <div id="p-empty" class="p-empty">
+          <div class="pe-icon"><i class="fa-solid fa-shield-halved"></i></div>
+          <h3>START AN ANALYSIS</h3>
+          <p>Enter origin and destination above, or tap the map twice, then click <strong>ANALYZE</strong> to get
+            real-time LAPD crime intelligence.</p>
+          <div class="pe-steps">
+            <div><span>01</span>
+              <p>Set locations</p>
             </div>
-            <div class="sc-badge" id="b-d">NO DATA</div>
-            <div class="sc-mini-stats">
-              <div><i class="fa-solid fa-exclamation-triangle"></i><span id="d-tot">—</span></div>
-              <div><i class="fa-solid fa-bolt"></i><span id="d-vio">—</span></div>
-              <div><i class="fa-solid fa-building-shield"></i><span id="d-area">—</span></div>
+            <div><span>02</span>
+              <p>Click Analyze</p>
+            </div>
+            <div><span>03</span>
+              <p>Review scores</p>
             </div>
           </div>
         </div>
 
-        <!-- Verdict -->
-        <div class="verdict" id="verdict">
-          <div class="v-icon" id="v-icon">⚡</div>
-          <div><div class="v-title" id="v-title">Awaiting analysis…</div><div class="v-sub" id="v-sub">Run analysis to see route safety verdict.</div></div>
-        </div>
+        <!-- ── DASHBOARD ── -->
+        <div id="p-dashboard" style="display:none">
 
-        <!-- Destination cases -->
-        <div class="p-section">
-          <div class="ps-hdr">
-            <h3><i class="fa-solid fa-exclamation-triangle"></i> Recent Incidents Near Destination</h3>
-            <span class="ps-count" id="cases-count">0 cases</span>
+          <div class="score-row">
+            <!-- Origin card -->
+            <div class="sc-card" id="sc-o">
+              <div class="sc-tag otag">ORIGIN</div>
+              <div class="sc-place" id="sco-place">—</div>
+              <div class="arc-wrap">
+                <svg viewBox="0 0 120 80" class="arc-svg">
+                  <path class="arc-track" d="M10,75 A50,50 0 0,1 110,75" />
+                  <path class="arc-fill" id="arc-o" d="M10,75 A50,50 0 0,1 110,75" stroke-dasharray="0 200" />
+                </svg>
+                <div class="arc-val"><span id="n-o">—</span><sub>/100</sub></div>
+              </div>
+              <div class="sc-badge" id="b-o">NO DATA</div>
+              <div class="sc-mini-stats">
+                <div><i class="fa-solid fa-exclamation-triangle"></i><span id="o-tot">—</span></div>
+                <div><i class="fa-solid fa-bolt"></i><span id="o-vio">—</span></div>
+                <div><i class="fa-solid fa-building-shield"></i><span id="o-area">—</span></div>
+              </div>
+            </div>
+
+            <!-- Route card -->
+            <div class="rt-card" id="rt-c">
+              <div class="sc-tag rtag">ROUTE</div>
+              <div class="rt-num" id="n-r">—</div><sub class="rt-sub">/100</sub>
+              <div class="sc-badge big" id="b-r">NO DATA</div>
+              <div class="rt-bar-wrap">
+                <div class="rt-track">
+                  <div class="rt-fill" id="rt-fill"></div>
+                </div>
+                <div class="rt-labs"><span>DANGER</span><span>SAFE</span></div>
+              </div>
+              <div class="rt-stats">
+                <div><i class="fa-solid fa-road"></i><span id="rt-dist">—</span></div>
+                <div><i class="fa-solid fa-clock"></i><span id="rt-time">—</span></div>
+                <div><i class="fa-solid fa-triangle-exclamation"></i><span id="rt-tot">—</span></div>
+                <div><i class="fa-solid fa-calendar-days"></i><span id="rt-per">—</span></div>
+              </div>
+            </div>
+
+            <!-- Destination card -->
+            <div class="sc-card" id="sc-d">
+              <div class="sc-tag dtag">DEST</div>
+              <div class="sc-place" id="scd-place">—</div>
+              <div class="arc-wrap">
+                <svg viewBox="0 0 120 80" class="arc-svg">
+                  <path class="arc-track" d="M10,75 A50,50 0 0,1 110,75" />
+                  <path class="arc-fill" id="arc-d" d="M10,75 A50,50 0 0,1 125,75" stroke-dasharray="0 200" />
+                </svg>
+                <div class="arc-val"><span id="n-d">—</span><sub>/100</sub></div>
+              </div>
+              <div class="sc-badge" id="b-d">NO DATA</div>
+              <div class="sc-mini-stats">
+                <div><i class="fa-solid fa-exclamation-triangle"></i><span id="d-tot">—</span></div>
+                <div><i class="fa-solid fa-bolt"></i><span id="d-vio">—</span></div>
+                <div><i class="fa-solid fa-building-shield"></i><span id="d-area">—</span></div>
+              </div>
+            </div>
           </div>
-          <div class="cases-grid" id="cases-grid"><p class="no-data">Run analysis to see nearby incidents.</p></div>
-        </div>
 
-        <!-- Charts 2-col -->
-        <div class="charts-2col">
-          <div class="cc"><div class="cc-hdr"><i class="fa-solid fa-chart-bar"></i> Crime Types</div><div id="breakdown-bars"><p class="no-data">—</p></div></div>
-          <div class="cc"><div class="cc-hdr"><i class="fa-solid fa-users"></i> Demographics</div>
-            <div class="demo-2"><div><div class="demo-sub">GENDER</div><div id="gender-bars"></div></div><div><div class="demo-sub">AGE</div><div id="age-bars"></div></div></div>
+          <!-- Verdict -->
+          <div class="verdict" id="verdict">
+            <div class="v-icon" id="v-icon">⚡</div>
+            <div>
+              <div class="v-title" id="v-title">Awaiting analysis…</div>
+              <div class="v-sub" id="v-sub">Run analysis to see route safety verdict.</div>
+            </div>
+          </div>
+
+          <!-- Destination cases -->
+          <div class="p-section">
+            <div class="ps-hdr">
+              <h3><i class="fa-solid fa-exclamation-triangle"></i> Recent Incidents Near Destination</h3>
+              <span class="ps-count" id="cases-count">0 cases</span>
+            </div>
+            <div class="cases-grid" id="cases-grid">
+              <p class="no-data">Run analysis to see nearby incidents.</p>
+            </div>
+          </div>
+
+          <!-- Charts 2-col -->
+          <div class="charts-2col">
+            <div class="cc">
+              <div class="cc-hdr"><i class="fa-solid fa-chart-bar"></i> Crime Types</div>
+              <div id="breakdown-bars">
+                <p class="no-data">—</p>
+              </div>
+            </div>
+            <div class="cc">
+              <div class="cc-hdr"><i class="fa-solid fa-users"></i> Demographics</div>
+              <div class="demo-2">
+                <div>
+                  <div class="demo-sub">GENDER</div>
+                  <div id="gender-bars"></div>
+                </div>
+                <div>
+                  <div class="demo-sub">AGE</div>
+                  <div id="age-bars"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="charts-2col">
+            <div class="cc">
+              <div class="cc-hdr"><i class="fa-solid fa-gun"></i> Weapons</div>
+              <div id="weapons-bars">
+                <p class="no-data">—</p>
+              </div>
+            </div>
+            <div class="cc">
+              <div class="cc-hdr"><i class="fa-solid fa-building-shield"></i> LAPD Districts</div>
+              <div id="district-bars">
+                <p class="no-data">—</p>
+              </div>
+            </div>
+          </div>
+          <div class="cc" style="margin-top:12px">
+            <div class="cc-hdr"><i class="fa-solid fa-lightbulb"></i> Safety Recommendations</div>
+            <div id="tips-out">
+              <p class="no-data">Run analysis to get tips.</p>
+            </div>
           </div>
         </div>
-        <div class="charts-2col">
-          <div class="cc"><div class="cc-hdr"><i class="fa-solid fa-gun"></i> Weapons</div><div id="weapons-bars"><p class="no-data">—</p></div></div>
-          <div class="cc"><div class="cc-hdr"><i class="fa-solid fa-building-shield"></i> LAPD Districts</div><div id="district-bars"><p class="no-data">—</p></div></div>
-        </div>
-        <div class="cc" style="margin-top:12px">
-          <div class="cc-hdr"><i class="fa-solid fa-lightbulb"></i> Safety Recommendations</div>
-          <div id="tips-out"><p class="no-data">Run analysis to get tips.</p></div>
-        </div>
-      </div>
 
-      <!-- ── INCIDENTS ── -->
-      <div id="p-incidents" style="display:none">
-        <div class="inc-bar">
-          <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <select id="f-type" class="fsel" onchange="refilter()"><option value="all">All Types</option><option value="violent">Violent</option><option value="property">Property</option><option value="other">Other</option></select>
-            <select id="f-year" class="fsel" onchange="refilter()"><option value="all">All Years</option><option value="2024">2024</option><option value="2023">2023</option><option value="2022">2022</option><option value="2021">2021</option><option value="2020">2020</option></select>
+        <!-- ── INCIDENTS ── -->
+        <div id="p-incidents" style="display:none">
+          <div class="inc-bar">
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <select id="f-type" class="fsel" onchange="refilter()">
+                <option value="all">All Types</option>
+                <option value="violent">Violent</option>
+                <option value="property">Property</option>
+                <option value="other">Other</option>
+              </select>
+              <select id="f-year" class="fsel" onchange="refilter()">
+                <option value="all">All Years</option>
+                <option value="2024">2024</option>
+                <option value="2023">2023</option>
+                <option value="2022">2022</option>
+                <option value="2021">2021</option>
+                <option value="2020">2020</option>
+              </select>
+            </div>
+            <div class="inc-search-wrap"><i class="fa-solid fa-magnifying-glass"></i><input id="f-search"
+                placeholder="Search incidents…" oninput="refilter()" /></div>
           </div>
-          <div class="inc-search-wrap"><i class="fa-solid fa-magnifying-glass"></i><input id="f-search" placeholder="Search incidents…" oninput="refilter()"/></div>
+          <div id="inc-list">
+            <p class="no-data">Run an analysis first.</p>
+          </div>
         </div>
-        <div id="inc-list"><p class="no-data">Run an analysis first.</p></div>
-      </div>
 
-      <!-- ── ROUTES ── -->
-      <div id="p-routes" style="display:none">
-        <div id="routes-out"><p class="no-data">Run an analysis to see route options.</p></div>
-      </div>
+        <!-- ── ROUTES ── -->
+        <div id="p-routes" style="display:none">
+          <div id="routes-out">
+            <p class="no-data">Run an analysis to see route options.</p>
+          </div>
+        </div>
 
-      <!-- ── SAVED ── -->
-      <div id="p-saved" style="display:none">
-        <div id="saved-out"><p class="no-data">No saved routes yet.</p></div>
-      </div>
+        <!-- ── SAVED ── -->
+        <div id="p-saved" style="display:none">
+          <div id="saved-out">
+            <p class="no-data">No saved routes yet.</p>
+          </div>
+        </div>
 
-    </div><!-- /panel-scroll -->
-  </section>
-</main>
+      </div><!-- /panel-scroll -->
+    </section>
+  </main>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="js/config.js"></script>
-<script src="js/auth.js"></script>
-<script src="js/map.js"></script>
-<script src="js/api.js"></script>
-<script src="js/score.js"></script>
-<script src="js/render.js"></script>
-<script src="js/app.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/map.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/score.js"></script>
+  <script src="js/render.js"></script>
+  <script src="js/app.js"></script>
 </body>
+
 </html>

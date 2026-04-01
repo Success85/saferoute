@@ -184,7 +184,7 @@ function clearCrimeMarkers() {
 function renderCrimeMarkers(crimes, refDate) {
   clearCrimeMarkers();
   if (!APP.showMarkers) return;
-  const limit = Math.min(crimes.length, 500);
+  const limit = Math.min(crimes.length, 1000);
   const ref   = (refDate || new Date('2024-12-31')).getTime();
 
   for (let i = 0; i < limit; i++) {

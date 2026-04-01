@@ -240,9 +240,7 @@ async function runAnalysis() {
   });
   switchPanel('dashboard');
 
-  setText('map-status',
-    `${crimes.length} LAPD incidents · Latest: ${refLabel} · LAPD 2020–2024`
-  );
+  setText('map-status', `Latest: ${refLabel} · LAPD 2020–2024`);
 
   await sleep(60);
 

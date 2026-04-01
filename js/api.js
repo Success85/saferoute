@@ -49,7 +49,7 @@ async function fetchCrimes(oLL, dLL, radiusKm) {
 
   const url = CFG.LAPD_URL
     + `?$$app_token=${CFG.SOCRATA_TOKEN}`
-    + `&$limit=500`
+    + `&$limit=1000`
     + `&$order=date_occ DESC`
     + `&$where=${encodeURIComponent(where)}`
     + `&$select=${encodeURIComponent(fields)}`;
