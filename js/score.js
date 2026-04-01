@@ -105,13 +105,13 @@ function buildVerdict(rtScore, oRes, dRes, crimes, destLabel) {
     sub = `Incidents found — Origin: ${oRes.score}/100 · Destination: ${dRes.score}/100. Standard precautions apply.`;
   } else if (rtScore >= 55) {
     title = `Exercise caution on this route`;
-    sub = `${oRes.total + dRes.total} Incidents detected. Stay alert, especially after dark.`;
+    sub = `${oRes.recent + dRes.recent} Incidents detected. Stay alert, especially after dark.`;
   } else if (rtScore >= 35) {
     title = `Notable crime activity along this corridor`;
-    sub = `${oRes.total + dRes.total} Incidents found. Consider alternate routes.`;
+    sub = `${oRes.recent + dRes.recent} Incidents found. Consider alternate routes.`;
   } else {
     title = `High-risk route — plan carefully`;
-    sub = `${oRes.total + dRes.total} Incidents found. Strongly consider alternate routes or extra precautions.`;
+    sub = `${oRes.recent + dRes.recent} Incidents found. Strongly consider alternate routes or extra precautions.`;
   }
 
   return { title, sub, emoji: rl.emoji, color: rl.color };
