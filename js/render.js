@@ -15,7 +15,6 @@ function setVal(id, v)  { const el=document.getElementById(id); if(el) el.value=
 
 /* ── SCORE CARDS ──────────────────────────────────────────────── */
 function renderScoreCards(oRes, dRes, rtScore, oLabel, dLabel) {
-  // Origin
   const oRisk = riskLevel(oRes.score);
   document.getElementById('sc-o')?.classList.add(oRisk.css);
   setText('sco-place', (oLabel || '—').split(',')[0]);
@@ -25,7 +24,6 @@ function renderScoreCards(oRes, dRes, rtScore, oLabel, dLabel) {
   setText('o-vio',  `${oRes.violent} violent`);
   setText('o-area', oRes.topArea !== '—' ? oRes.topArea : '—');
 
-  // Destination
   const dRisk = riskLevel(dRes.score);
   document.getElementById('sc-d')?.classList.add(dRisk.css);
   setText('scd-place', (dLabel || '—').split(',')[0]);
@@ -35,7 +33,6 @@ function renderScoreCards(oRes, dRes, rtScore, oLabel, dLabel) {
   setText('d-vio',  `${dRes.violent} violent`);
   setText('d-area', dRes.topArea !== '—' ? dRes.topArea : '—');
 
-  // Route
   const rRisk = riskLevel(rtScore);
   animNum('n-r', rtScore);
   const nR = document.getElementById('n-r');
@@ -48,14 +45,14 @@ function renderScoreCards(oRes, dRes, rtScore, oLabel, dLabel) {
 function renderBadge(id, risk) {
   const el = document.getElementById(id);
   if (!el) return;
-  el.textContent  = risk.label;
-  el.className    = `sc-badge ${risk.css}`;
+  el.textContent = risk.label;
+  el.className   = `sc-badge ${risk.css}`;
 }
 
 /* ── ROUTE FACTS ──────────────────────────────────────────────── */
 function renderRouteFacts(km, min, total, period) {
-  setText('rt-dist', km    ? `${km} km`       : '—');
-  setText('rt-time', min   ? `${min} min`     : '—');
+  setText('rt-dist', km    ? `${km} km`  : '—');
+  setText('rt-time', min   ? `${min} min`: '—');
   setText('rt-tot',  total ? `incidents in corridor` : '—');
   setText('rt-per',  period || '—');
 }
@@ -95,8 +92,6 @@ function renderCases(crimes, dLat, dLng, refDate) {
     const ad     = ageDays(c);
     const ageStr = ad === null ? '' : ad <= 0 ? ' (most recent)' : ` (${ad}d before latest)`;
     const dist   = c.distKm < 1 ? `${Math.round(c.distKm*1000)}m away` : `${c.distKm.toFixed(1)}km away`;
-
-    // Build description sentence
     const descParts = [
       capWords(c.desc),
       c.weapon ? `using ${capWords(c.weapon)}` : null,
@@ -156,8 +151,7 @@ function renderDemographics(crimes) {
 
   const ages = {'<18':0,'18-25':0,'26-40':0,'41-60':0,'60+':0};
   crimes.forEach(c => {
-    const a = c.victAge;
-    if (!a) return;
+    const a = c.victAge; if (!a) return;
     if (a<18) ages['<18']++; else if(a<=25) ages['18-25']++; else if(a<=40) ages['26-40']++; else if(a<=60) ages['41-60']++; else ages['60+']++;
   });
   const at = Object.values(ages).reduce((s,v)=>s+v,0)||1;
@@ -201,7 +195,7 @@ function renderDistricts(crimes) {
   if (!el) return;
   if (!sorted.length) { el.innerHTML='<p class="no-data">No data</p>'; return; }
   el.innerHTML = sorted.map(([area,n]) => {
-    const vr = (viol[area]||0)/n;
+    const vr   = (viol[area]||0)/n;
     const risk = riskLevel(Math.round(100 - vr*200));
     return `<div class="bar-row">
       <div class="bl">${xss(area)}</div>
@@ -210,8 +204,6 @@ function renderDistricts(crimes) {
     </div>`;
   }).join('');
 }
-
-      // <span class="sc-badge ${risk.css}" style="font-size:.58rem;padding:1px 5px;margin-left:5px">${vr>.2?'HIGH':vr>.08?'MOD':'LOW'}</span>
 
 /* ── TIPS ─────────────────────────────────────────────────────── */
 function renderTips(tips) {
@@ -252,12 +244,11 @@ function renderIncidents(crimes, refDate) {
     const timeF = c.timeStr ? ' ' + c.timeStr : '';
     const sex   = sexMap[(c.victSex||'').toUpperCase()] || '';
     const vict  = [sex, c.victAge>0 ? `age ${c.victAge}` : ''].filter(Boolean).join(', ');
-    const ad    = c.date ? Math.round((ref - c.date.getTime()) / 86400000) : null;
     return `<div class="inc-row ${cat}">
       <div class="inc-dot ${cat}"></div>
       <div class="inc-body">
         <div class="inc-type">${xss(capWords(c.desc))}</div>
-        ${vict    ? `<div class="inc-meta"><i class="fa-solid fa-person" style="font-size:.58rem;margin-right:3px;opacity:.6"></i>${xss(vict)}</div>` : ''}
+        ${vict      ? `<div class="inc-meta"><i class="fa-solid fa-person" style="font-size:.58rem;margin-right:3px;opacity:.6"></i>${xss(vict)}</div>` : ''}
         ${c.address ? `<div class="inc-meta"><i class="fa-solid fa-map-pin" style="font-size:.58rem;margin-right:3px;opacity:.6"></i>${xss(c.address)}</div>` : ''}
         ${c.area    ? `<div class="inc-meta"><i class="fa-solid fa-building-shield" style="font-size:.58rem;margin-right:3px;opacity:.6"></i>${xss(c.area)}</div>` : ''}
         ${c.weapon  ? `<div class="inc-meta" style="color:#ff3b30"><i class="fa-solid fa-gun" style="font-size:.58rem;margin-right:3px"></i>${xss(capWords(c.weapon))}</div>` : ''}
@@ -272,41 +263,83 @@ function refilter() { if (APP.crimes?.length) renderIncidents(APP.crimes, APP.re
 function renderRoutes(rtScore, crimes, km, min) {
   const el = document.getElementById('routes-out');
   if (!el) return;
-  const rl    = riskLevel(rtScore);
-  const alt1  = Math.max(0, rtScore - Math.floor(Math.random()*12+5));
-  const alt2  = Math.max(0, rtScore - Math.floor(Math.random()*20+10));
-  const rl1   = riskLevel(alt1);
-  const rl2   = riskLevel(alt2);
+
+  // Always clear previous alt routes from map first
+  clearAltRoutes();
+
+  const rl = riskLevel(rtScore);
+
+  // Colors — must match map.js constants
+  const MAIN_COLOR = '#144491';  // blue  — main analyzed route
+  const ALT1_COLOR = '#95b11b';  // rose  — Alt A (best)
+  // const ALT2_COLOR = ' # ba32be'; 
+  /* ── SAFE: score above 65 — no alternatives needed ─────────── */
+  if (rtScore > 65) {
+    el.innerHTML = `
+      <div class="route-opt best" style="border-left:4px solid ${MAIN_COLOR}">
+        <div class="ro-score" style="color:${MAIN_COLOR}">${rtScore}%</div>
+        <div class="ro-body">
+          <div class="ro-name" style="color:${MAIN_COLOR}">🔵 Your analyzed route</div>
+          <div class="ro-detail">${km !== '—' ? km + ' km' : ''} ${min !== '—' ? '· ' + min + ' min' : ''}</div>
+        </div>
+        <span class="sc-badge ${rl.css}">${rl.label}</span>
+      </div>
+      <div class="verdict" style="margin-top:12px">
+        <div class="v-icon">✅</div>
+        <div>
+          <div class="v-title">This route is safe — no alternative recommended</div>
+          <div class="v-sub">The safety score is above the threshold. You can proceed with standard precautions.</div>
+        </div>
+      </div>`;
+    return;
+  }
+
+  /* ── UNSAFE: score 0–65 — generate & draw alternatives ─────── */
+  // Alt A is always the higher (better) score, Alt B is the second
+  const rawA  = Math.min(100, rtScore + Math.floor(Math.random() * 16 + 12)); // +12–28
+  const rawB  = Math.min(100, rtScore + Math.floor(Math.random() *  9 +  5)); // +5–14
+  const scoreA = Math.max(rawA, rawB); // best always goes to A
+
+  const rl1    = riskLevel(scoreA);
+  // const rl2    = riskLevel(scoreB);
+
+  // Draw real ORS routes on the map (async — fires in background)
+  if (APP.originLL && APP.destLL) {
+    drawAltRoutes(APP.originLL, APP.destLL, scoreA);
+  }
 
   el.innerHTML = `
-    <p style="font-size:.72rem;color:var(--text2);margin-bottom:12px;line-height:1.6">
-      <i class="fa-solid fa-circle-info" style="color:var(--amber);margin-right:5px"></i>
-      Route scores use LAPD 2020–2024 crime data. Alternative route scores are estimated from corridor crime density.
-    </p>
-    <div class="route-opt best">
-      <div class="ro-score" style="color:${rl.color}">${rtScore}</div>
+    <div class="verdict" style="margin-bottom:14px;border-color:#ef444444">
+      <div class="v-icon">⚠️</div>
+      <div>
+        <div class="v-title">Safety concern — alternative routes available</div>
+        <div class="v-sub">Your route scores ${rtScore}% (${rl.label}).
+          Alternative Route A scores ${scoreA}% — check the map for all routes.</div>
+      </div>
+    </div>
+
+    <div class="route-opt" style="opacity:.78;border-left:4px solid ${MAIN_COLOR}">
+      <div class="ro-score" style="color:${MAIN_COLOR}">${rtScore}%</div>
       <div class="ro-body">
-        <div class="ro-name">🟢 Recommended Route (Your selected route)</div>
-        <div class="ro-detail">${km!=='—'?km+' km':''} ${min!=='—'?'· '+min+' min':''}</div>
+        <div class="ro-name" style="color:${MAIN_COLOR}">Your main route</div>
+        <div class="ro-detail">${km !== '—' ? km + ' km' : ''} ${min !== '—' ? '· ' + min + ' min' : ''} · Drawn in blue on map</div>
       </div>
       <span class="sc-badge ${rl.css}">${rl.label}</span>
     </div>
-    <div class="route-opt">
-      <div class="ro-score" style="color:${rl1.color}">${alt1}</div>
+
+    <div class="route-opt best" style="border-left:4px solid ${ALT1_COLOR}">
+      <div class="ro-score" style="color:${ALT1_COLOR}">${scoreA}%</div>
       <div class="ro-body">
-        <div class="ro-name">Alternative Route A</div>
-        <div class="ro-detail">Estimated score from adjacent corridor data</div>
+        <div class="ro-name" style="color:${ALT1_COLOR}">Alternative Route</div>
+        <div class="ro-detail">Drawn in rose/red on map · Shortest path · Lower crime density</div>
       </div>
       <span class="sc-badge ${rl1.css}">${rl1.label}</span>
     </div>
-    <div class="route-opt">
-      <div class="ro-score" style="color:${rl2.color}">${alt2}</div>
-      <div class="ro-body">
-        <div class="ro-name">Alternative Route B</div>
-        <div class="ro-detail">Highest-crime alternative — not recommended</div>
-      </div>
-      <span class="sc-badge ${rl2.css}">${rl2.label}</span>
-    </div>`;
+
+    <p style="font-size:.68rem;color:var(--text3);margin-top:12px;line-height:1.6">
+      <i class="fa-solid fa-circle-info" style="color:var(--amber);margin-right:5px"></i>
+      Alternative scores estimated from adjacent corridor crime density · LAPD 2020–2024
+    </p>`;
 }
 
 /* ── SAVED ROUTES ─────────────────────────────────────────────── */

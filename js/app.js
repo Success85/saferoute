@@ -139,6 +139,7 @@ function clearAll() {
   if (MAP.originMk)   { MAP.lmap.removeLayer(MAP.originMk);  MAP.originMk = null; }
   if (MAP.destMk)     { MAP.lmap.removeLayer(MAP.destMk);    MAP.destMk   = null; }
   clearCrimeMarkers();
+  clearAltRoutes(); 
   APP.originLL = null; APP.destLL = null;
   APP.originLabel = ''; APP.destLabel = '';
   APP.crimes = []; APP.refDate = null;
