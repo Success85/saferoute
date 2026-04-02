@@ -1,8 +1,8 @@
 'use strict';
-/* ═══════════════════════════════════════════════════════════════
+/* 
    config.js — API keys, endpoints, crime classifiers
    API Keys are provided in assignment comment section per spec.
-═══════════════════════════════════════════════════════════════ */
+*/
 
 const CFG = {
   // LAPD Socrata SODA
@@ -14,10 +14,10 @@ const CFG = {
   ORS_KEY:  'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjllNmJhNThjZTNlZTRkYTFhN2NmODc3MjNkMTA0ODllIiwiaCI6Im11cm11cjY0In0=',
   ORS_BASE: 'https://api.openrouteservice.org',
 
-  // Nominatim (geocoding — no key needed)
+  // Nominatim geocoding — no key needed
   NOM_BASE: 'https://nominatim.openstreetmap.org',
 
-  // LA bounds
+  // Los Angeles bounds
   LA_CENTER: [34.0522, -118.2437],
   LA_BOUNDS: { minLat: 33.7, maxLat: 34.37, minLng: -118.75, maxLng: -118.15 },
 };
@@ -41,7 +41,7 @@ function classifyCrime(desc) {
   return 'other';
 }
 
-/* ── LA bounds check helpers ─────────────────────────────────── */
+/* Los Angeles bounds check helpers  */
 function isInLA(lat, lng) {
   const b = CFG.LA_BOUNDS;
   return lat >= b.minLat && lat <= b.maxLat && lng >= b.minLng && lng <= b.maxLng;

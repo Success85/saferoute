@@ -1,15 +1,7 @@
-# SafeNav LA — .gitignore
+# Saferoute LA — .gitignore
 
 # Node
 node_modules/
-npm-debug.log*
-package-lock.json
-
-# Environment / secrets
-.env
-.env.local
-.env.*.local
-secrets/
 
 # OS generated
 .DS_Store
@@ -22,18 +14,8 @@ Thumbs.db
 
 # Editor
 .vscode/
-.idea/
-*.swp
-*.swo
 
-# Build output
-dist/
-build/
 
 # Logs
 *.log
 logs/
-
-# Testing
-coverage/
-.nyc_output/

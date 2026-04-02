@@ -1,10 +1,10 @@
 'use strict';
-/* ═══════════════════════════════════════════════════════════════
+/* 
    api.js — LAPD Socrata SODA fetch, Nominatim geocoding,
             autocomplete dropdowns
-═══════════════════════════════════════════════════════════════ */
+*/
 
-/* ── FORWARD GEOCODE (Nominatim) ──────────────────────────────── */
+/* FORWARD GEOCODE (Nominatim)  */
 async function geocodeForward(query) {
   if (!query || query.trim().length < 3) return null;
   const { minLat, maxLat, minLng, maxLng } = CFG.LA_BOUNDS;
@@ -22,7 +22,7 @@ async function geocodeForward(query) {
   } catch { return null; }
 }
 
-/* ── LAPD CRIME FETCH ─────────────────────────────────────────── */
+/* LAPD CRIME FETCH  */
 async function fetchCrimes(oLL, dLL, radiusKm) {
   // Correct degree buffer: 1° ≈ 111km
   const pad    = Math.max(radiusKm / 111, 0.025);
@@ -65,7 +65,7 @@ async function fetchCrimes(oLL, dLL, radiusKm) {
   return crimes;
 }
 
-/* ── NORMALIZE RECORD ─────────────────────────────────────────── */
+/* NORMALIZE RECORD */
 function normalizeRecord(r) {
   const lat  = parseFloat(r.lat ?? 0);
   const lng  = parseFloat(r.lon ?? 0);
@@ -92,7 +92,7 @@ function normalizeRecord(r) {
   };
 }
 
-/* ── AUTOCOMPLETE ─────────────────────────────────────────────── */
+/* AUTOCOMPLETE */
 const AC_DEBOUNCE = {};
 
 function setupAC(inputId, dropId, onPick) {
@@ -139,7 +139,7 @@ function renderDrop(drop, results, inp, onPick) {
 }
 function closeDrop(drop) { drop?.classList.remove('open'); if(drop) drop.innerHTML=''; }
 
-/* ── GPS ──────────────────────────────────────────────────────── */
+/* GPS */
 async function useGPS() {
   if (!navigator.geolocation) { toast('Geolocation not supported', 'error'); return; }
   toast('Requesting GPS…', 'info');

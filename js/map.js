@@ -1,8 +1,8 @@
 'use strict';
-/* ═══════════════════════════════════════════════════════════════
+/* 
    map.js — Leaflet init, tap-to-pick, ORS route drawing,
             crime dot markers with full popups
-═══════════════════════════════════════════════════════════════ */
+ */
 
 const MAP = {
   lmap:         null,
@@ -21,7 +21,7 @@ const MAP = {
 const MAIN_COLOR = '#144491';
 const ALT1_COLOR = '#95b11b';
 
-/* ── INIT ─────────────────────────────────────────────────────── */
+/* INIT  */
 function initMap() {
   MAP.lmap = L.map('map', {
     center:      CFG.LA_CENTER,
@@ -98,7 +98,7 @@ function applyTile() {
   ).addTo(MAP.lmap);
 }
 
-/* ── REVERSE GEOCODE ──────────────────────────────────────────── */
+/* REVERSE GEOCODE */
 async function reverseGeocode(lat, lng) {
   try {
     const url = `${CFG.NOM_BASE}/reverse?format=json&lat=${lat}&lon=${lng}&zoom=16&addressdetails=1`;
@@ -113,7 +113,7 @@ async function reverseGeocode(lat, lng) {
   }
 }
 
-/* ── PIN ICONS ────────────────────────────────────────────────── */
+/* PIN ICONS */
 function makePin(letter, color) {
   return L.divIcon({
     className: '',
@@ -143,7 +143,7 @@ function placePinDest(lat, lng) {
     .bindPopup(`<div class="cpop"><div class="cpop-hdr"><div class="cpop-dot" style="background:#f59e0b"></div><div class="cpop-title">🏁 Destination</div></div><div class="cpop-row"><i class="fa-solid fa-location-dot"></i><span>${lat.toFixed(5)}, ${lng.toFixed(5)}</span></div></div>`, { maxWidth: 220 });
 }
 
-/* ── ORS FETCH HELPER ─────────────────────────────────────────── */
+/* ORS FETCH HELPER */
 async function fetchORSRoute(origin, dest, preference) {
   const r = await fetch(`${CFG.ORS_BASE}/v2/directions/driving-car/geojson`, {
     method:  'POST',
@@ -158,7 +158,7 @@ async function fetchORSRoute(origin, dest, preference) {
   return r.json();
 }
 
-/* ── DRAW MAIN ROUTE ──────────────────────────────────────────── */
+/* DRAW MAIN ROUTE */
 async function drawRouteORS(origin, dest) {
   if (MAP.routeLayer) { MAP.lmap.removeLayer(MAP.routeLayer); MAP.routeLayer = null; }
   if (MAP.mainLabel)  { MAP.lmap.removeLayer(MAP.mainLabel);  MAP.mainLabel  = null; }
@@ -207,7 +207,7 @@ async function drawRouteORS(origin, dest) {
   }
 }
 
-/* ── DRAW SINGLE ALTERNATIVE ROUTE ───────────────────────────── */
+/*  DRAW SINGLE ALTERNATIVE ROUTE */
 async function drawAltRoutes(origin, dest, scoreA) {
   clearAltRoutes();
 
@@ -232,13 +232,13 @@ async function drawAltRoutes(origin, dest, scoreA) {
   }
 }
 
-/* ── CLEAR ALT ROUTES ─────────────────────────────────────────── */
+/* CLEAR ALT ROUTES */
 function clearAltRoutes() {
   if (MAP.altLayer1) { MAP.lmap.removeLayer(MAP.altLayer1); MAP.altLayer1 = null; }
   if (MAP.altLabel1) { MAP.lmap.removeLayer(MAP.altLabel1); MAP.altLabel1 = null; }
 }
 
-/* ── SCORE LABELS ─────────────────────────────────────────────── */
+/*  SCORE LABELS */
 function _scoreLabel(lat, lng, score, bg, textColor, tag) {
   return L.marker([lat, lng], {
     icon: L.divIcon({
@@ -275,7 +275,7 @@ function _mainRouteLabel(lat, lng, score) {
   }).addTo(MAP.lmap);
 }
 
-/* ── BÉZIER FALLBACK ──────────────────────────────────────────── */
+/*  BÉZIER FALLBACK  */
 function _bezier(origin, dest, latOffset, steps) {
   const ctrlLat = (origin.lat + dest.lat) / 2 + latOffset;
   const ctrlLng = (origin.lng + dest.lng) / 2;
@@ -290,7 +290,7 @@ function _bezier(origin, dest, latOffset, steps) {
   return pts;
 }
 
-/* ── CRIME MARKERS ────────────────────────────────────────────── */
+/*  CRIME MARKERS  */
 function clearCrimeMarkers() {
   MAP.crimeMarkers.forEach(m => MAP.lmap.removeLayer(m));
   MAP.crimeMarkers = [];
@@ -341,7 +341,7 @@ function renderCrimeMarkers(crimes, refDate) {
   }
 }
 
-/* ── MAP CONTROLS ─────────────────────────────────────────────── */
+/*  MAP CONTROLS  */
 function toggleMarkers() {
   APP.showMarkers = !APP.showMarkers;
   document.getElementById('fab-markers')?.classList.toggle('active', APP.showMarkers);

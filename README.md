@@ -1,6 +1,6 @@
 # 🛡️ SafeNav LA — Crime Intelligence & Route Safety
 
-**Real-time Los Angeles route safety assessment powered by LAPD open data (2020–2024)**
+**Real-time Los Angeles route safety assessment powered by 1000 LAPD open data (2024)**
 
 ---
 
@@ -16,10 +16,10 @@ http://[web02-ip]/safenav/ ← Web02 direct
 
 ## What It Does
 
-SafeNav LA lets you enter an origin and destination (or tap the map twice) to instantly:
+SafeNav LA lets you enter an origin and destination (or tap the map) to instantly choose location:
 
 - **Draw the driving route** on an interactive Leaflet map
-- **Fetch real LAPD crime incidents** from 2020–2024 within the corridor
+- **Fetch real LAPD crime incidents** from 2024 within the corridor
 - **Score each location 0–100** using a weighted algorithm (crime type × recency × distance)
 - **Show the 3–5 closest incidents** to your destination with full details: victim, weapon, address, crime type
 - **Display 8 analytics cards**: Origin Score, Route Score, Destination Score, Crime Breakdown, Demographics, Incidents, Weapons, LAPD Districts
@@ -36,21 +36,22 @@ SafeNav LA lets you enter an origin and destination (or tap the map twice) to in
 | **Nominatim (OpenStreetMap)** | Forward & reverse geocoding — converts text addresses to GPS | https://nominatim.org/release-docs/develop/api/Search/ |
 | **OSRM (Project OSRM)** | Free driving route calculation | http://project-osrm.org/ |
 | **Leaflet.js** | Interactive map rendering | https://leafletjs.com/reference.html |
-| **CartoDB Basemaps** | Dark/light map tiles (free, no key) | https://carto.com/basemaps |
 
 ### API Key
 ```
 LAPD App Token: twFAnZFlGFmESjd8vKBRLpPfEWslzbz34FJsggy3
 ```
-*(Stored in `js/api.js` — for production, move to environment variable)*
+*(Stored in `js/api.js` — for production projects, it will be moved to environment variable)*
 
 ---
 
 ## Running Locally
 
 ```bash
+# Must have VPN running and device ip address shows USA
+
 # Option 1 — Python (no install needed)
-cd safenav/
+cd saferoute/
 python3 -m http.server 8080
 # Open http://localhost:8080
 
@@ -83,19 +84,19 @@ scp -r safenav/ ubuntu@[web01-ip]:/var/www/html/
 scp -r safenav/ ubuntu@[web02-ip]:/var/www/html/
 
 # OR clone from GitHub on each server
-sudo git clone https://github.com/[your-user]/safenav-la.git /var/www/html/safenav
+sudo git clone https://github.com/[your-user]/saferoute.git /var/www/html/safenav
 ```
 
 ### Nginx Configuration — Web01 and Web02
 
-Create `/etc/nginx/sites-available/safenav`:
+Create `/etc/nginx/sites-available/saferoute`:
 
 ```nginx
 server {
     listen 80 default_server;
     listen [::]:80 default_server;
     
-    root /var/www/html/safenav;
+    root /var/www/html/saferoute;
     index index.html;
     server_name _;
 
@@ -122,14 +123,14 @@ server {
 
     error_page 404 /index.html;
 
-    access_log /var/log/nginx/safenav_access.log;
-    error_log  /var/log/nginx/safenav_error.log;
+    access_log /var/log/nginx/saferoute_access.log;
+    error_log  /var/log/nginx/saferoute_error.log;
 }
 ```
 
 ```bash
 # Enable and restart on both servers
-sudo ln -s /etc/nginx/sites-available/safenav /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/saferoute /etc/nginx/sites-enabled/
 sudo rm -f /etc/nginx/sites-enabled/default
 sudo nginx -t && sudo systemctl reload nginx
 ```
@@ -138,7 +139,7 @@ sudo nginx -t && sudo systemctl reload nginx
 
 ### Load Balancer Configuration — Lb01
 
-On the load balancer server, create `/etc/nginx/sites-available/lb-safenav`:
+On the load balancer server, create `/etc/nginx/sites-available/lb-saferoute`:
 
 ```nginx
 upstream safenav_backend {
@@ -155,7 +156,7 @@ server {
     server_name _;
 
     location / {
-        proxy_pass         http://safenav_backend;
+        proxy_pass         http://saferoute_backend;
         proxy_http_version 1.1;
         proxy_set_header   Host              $host;
         proxy_set_header   X-Real-IP         $remote_addr;
@@ -186,7 +187,7 @@ server {
 ```
 
 ```bash
-sudo ln -s /etc/nginx/sites-available/lb-safenav /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/lb-saferoute /etc/nginx/sites-enabled/
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
@@ -206,7 +207,7 @@ sudo tail -f /var/log/nginx/lb_access.log
 ## Project Structure
 
 ```
-safenav/
+saferoute/
 ├── index.html          ← App shell + auth modal + HTML layout
 ├── css/
 │   └── main.css        ← Complete design system (dark/light themes)
@@ -267,11 +268,11 @@ deduction = type_weight × recency_multiplier × distance_decay
 ## Features
 
 ### Core
-- ✅ Tap map twice to set origin → destination
+- ✅ Tap map to choose and set origin → destination
 - ✅ Type address with autocomplete (Nominatim, LA-bounded)
 - ✅ GPS location for origin
 - ✅ OSRM driving route drawn on map
-- ✅ 500 LAPD incidents fetched per analysis
+- ✅ 1000 LAPD incidents fetched per analysis
 - ✅ Crime dot markers (red=violent, orange=property, purple=other)
 - ✅ Full popup on each dot: crime, victim, address, weapon, date
 - ✅ 8-card dashboard
@@ -284,16 +285,14 @@ deduction = type_weight × recency_multiplier × distance_decay
 - ✅ Login with session persistence (localStorage)
 - ✅ Guest mode
 - ✅ Password strength meter
-- ✅ Show/hide password toggles
 - ✅ Form field error states
 
 ### UX
-- ✅ Dark / Light mode toggle (persists)
 - ✅ Hamburger menu on mobile
 - ✅ Fully responsive (mobile, tablet, desktop)
 - ✅ Toast notifications (success/warn/error/info)
 - ✅ Loading overlay with animated rings
-- ✅ Save routes to localStorage
+- ✅ Save routes to localStorage - Comming soon
 - ✅ Filter incidents by type and year
 - ✅ Search incidents by keyword
 
@@ -310,14 +309,17 @@ deduction = type_weight × recency_multiplier × distance_decay
 **1. URLSearchParams encodes `$` as `%24`**
 Socrata's SODA API uses `$where`, `$limit` etc. Using `URLSearchParams` encodes `$` → `%24` which Socrata silently ignores, returning unfiltered random data. Solution: build the URL as a plain string — `$` stays literal, only *values* are `encodeURIComponent`'d.
 
-**2. Dataset ends in 2024 but app runs in 2026**
+**2. Dataset ends in 2024**
 Using `Date.now()` as the recency reference makes all 2020–2024 records appear 400–2200 days old, collapsing deductions to near-zero and making every area score SAFE. Solution: after each fetch, compute the newest crime date in the batch and use that as the reference for all age calculations.
 
 **3. SVG `arc.className =` throws**
 SVG `<path>` elements expose `.className` as a read-only `SVGAnimatedString`. Solution: use `arc.setAttribute('class', ...)` instead.
 
-**4. Map tap origin/destination**
-Used a `tapCount` state variable: first tap sets origin (also reverse-geocodes the label), second tap sets destination, counter resets.
+---
+
+## Demo
+- **Video Link**: 
+- **Website Link**: [
 
 ---
 

@@ -1,7 +1,7 @@
 'use strict';
-/* ═══════════════════════════════════════════════════════════════
+/* 
    auth.js — localStorage authentication
-═══════════════════════════════════════════════════════════════ */
+ */
 
 const SESS_KEY  = 'saferoute_sess';
 const USERS_KEY = 'saferoute_users';
@@ -18,7 +18,7 @@ function hashPw(p) {
   return (h >>> 0).toString(16);
 }
 
-/* ── UI helpers ───────────────────────────────────────────────── */
+/* UI helpers */
 function togglePw(id, btn) {
   const el = document.getElementById(id);
   if (!el) return;
@@ -89,7 +89,7 @@ function setBtnLoading(btnId, on) {
   if (spin) spin.style.display = on ? 'inline' : 'none';
 }
 
-/* ── REGISTER ─────────────────────────────────────────────────── */
+/* REGISTER */
 async function doRegister(e) {
   e.preventDefault();
   clearAuthErrors();
@@ -135,7 +135,7 @@ async function doRegister(e) {
   toast(`Welcome, ${first}! Account created.`, 'success');
 }
 
-/* ── LOGIN ────────────────────────────────────────────────────── */
+/* LOGIN */
 async function doLogin(e) {
   e.preventDefault();
   clearAuthErrors();
@@ -168,7 +168,7 @@ async function doLogin(e) {
   toast(`Welcome back, ${user.firstName}!`, 'success');
 }
 
-/* ── GUEST ────────────────────────────────────────────────────── */
+/*  GUEST AUTH */
 function guestAccess() {
   setSession({ email: 'guest@saferoute.la', firstName: 'Guest', lastName: '', guest: true });
   closeAuth();
@@ -176,7 +176,7 @@ function guestAccess() {
   toast('Continuing as guest.', 'info');
 }
 
-/* ── LOGOUT ───────────────────────────────────────────────────── */
+/*  LOGOUT  */
 function doLogout() {
   clearSession();
   closeUserMenu();
@@ -184,7 +184,7 @@ function doLogout() {
   toast('Signed out.', 'info');
 }
 
-/* ── Apply session to UI ──────────────────────────────────────── */
+/*  Apply session to UI  */
 function applySession() {
   const s = getSession();
   if (!s) return;
@@ -207,7 +207,7 @@ document.addEventListener('click', e => {
   if (wrap && !wrap.contains(e.target)) closeUserMenu();
 });
 
-/* ── Boot: restore session on page load ───────────────────────── */
+/* Boot: restore session on page load  */
 document.addEventListener('DOMContentLoaded', () => {
   const s = getSession();
   if (s) { closeAuth(); applySession(); }

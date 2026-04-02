@@ -1,5 +1,5 @@
 'use strict';
-/* ═══════════════════════════════════════════════════════════════
+/* 
    cache.js — API Response Caching
    Bonus feature: caches LAPD API responses in sessionStorage
    so repeated analyses of the same route are instant.
@@ -7,12 +7,12 @@
    Cache key = hash of origin+dest+radius
    Cache TTL = 10 minutes (within a session)
    Storage   = sessionStorage (cleared when tab closes)
-═══════════════════════════════════════════════════════════════ */
+*/
 
 const CACHE_PREFIX = 'saferoute_cache_';
 const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
-/* ── Generate cache key from route parameters ─────────────────── */
+/*  Generate cache key from route parameters  */
 function cacheKey(oLL, dLL, radiusKm) {
   const str = [
     oLL.lat.toFixed(4), oLL.lng.toFixed(4),
@@ -28,7 +28,7 @@ function cacheKey(oLL, dLL, radiusKm) {
   return CACHE_PREFIX + (h >>> 0).toString(16);
 }
 
-/* ── Read from cache ──────────────────────────────────────────── */
+/*  Read from cache  */
 function cacheGet(key) {
   try {
     const raw = sessionStorage.getItem(key);
@@ -44,7 +44,7 @@ function cacheGet(key) {
   }
 }
 
-/* ── Write to cache ───────────────────────────────────────────── */
+/*  Write to cache  */
 function cacheSet(key, data) {
   try {
     sessionStorage.setItem(key, JSON.stringify({ data, ts: Date.now() }));
@@ -54,14 +54,14 @@ function cacheSet(key, data) {
   }
 }
 
-/* ── Clear all SafeRoute cache entries ───────────────────────── */
+/*  Clear all SafeRoute cache entries  */
 function cacheClear() {
   const keys = Object.keys(sessionStorage).filter(k => k.startsWith(CACHE_PREFIX));
   keys.forEach(k => sessionStorage.removeItem(k));
   return keys.length;
 }
 
-/* ── Cache stats for debugging ────────────────────────────────── */
+/*  Cache stats for debugging  */
 function cacheStats() {
   const keys    = Object.keys(sessionStorage).filter(k => k.startsWith(CACHE_PREFIX));
   const entries = keys.map(k => {
@@ -74,7 +74,7 @@ function cacheStats() {
   return { count: entries.length, entries };
 }
 
-/* ── Cached wrapper for fetchCrimes ──────────────────────────── */
+/*  Cached wrapper for fetchCrimes  */
 async function fetchCrimesCached(oLL, dLL, radiusKm) {
   const key    = cacheKey(oLL, dLL, radiusKm);
   const cached = cacheGet(key);

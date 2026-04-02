@@ -1,13 +1,13 @@
 'use strict';
-/* ═══════════════════════════════════════════════════════════════
+/* 
    score.js — Weighted safety scoring algorithm
-   Uses dataset-relative dates (not Date.now()) so 2020-2024 data
-   scores correctly when running in 2026+
-═══════════════════════════════════════════════════════════════ */
+   Uses dataset-relative dates (not Date.now()) so 2024 data
+   scores correctly when running in 2026. Using 1000 data from the data source to improve speed and accuracy.
+ */
 
 const ARC_LEN = 157; // SVG arc path length
 
-/* ── HAVERSINE ────────────────────────────────────────────────── */
+/*  HAVERSINE  */
 function haversine(lat1, lng1, lat2, lng2) {
   const R = 6371;
   const dL = toRad(lat2 - lat1), dN = toRad(lng2 - lng1);
@@ -16,13 +16,13 @@ function haversine(lat1, lng1, lat2, lng2) {
 }
 function toRad(d) { return d * Math.PI / 180; }
 
-/* ── COMPUTE DATASET MAX DATE ─────────────────────────────────── */
+/* COMPUTE DATASET MAX DATE */
 function computeRefDate(crimes) {
   const times = crimes.filter(c => c.date).map(c => c.date.getTime());
   return times.length ? new Date(Math.max(...times)) : new Date('2024-12-31');
 }
 
-/* ── SCORE LOCATION ───────────────────────────────────────────── */
+/* SCORE LOCATION  */
 function scoreLocation(crimes, cLat, cLng, radiusKm, refDate) {
   const ref = (refDate || new Date('2024-12-31')).getTime();
   const radM = radiusKm * 1000;
@@ -66,14 +66,14 @@ function scoreLocation(crimes, cLat, cLng, radiusKm, refDate) {
   return { score, total, violent, recent, topArea };
 }
 
-/* ── ROUTE SCORE ──────────────────────────────────────────────── */
+/*  ROUTE SCORE  */
 function calcRouteScore(oScore, dScore, crimes) {
   const density = Math.min(45, crimes.length * 0.22);
   const base = oScore * 0.4 + dScore * 0.4 + (50 - density) * 0.5;
   return Math.max(0, Math.min(100, Math.round(base)));
 }
 
-/* ── RISK LEVEL ───────────────────────────────────────────────── */
+/*  RISK LEVEL  */
 function riskLevel(score) {
   if (score >= 75) return { label: 'SAFE', css: 'safe', color: '#10b981', emoji: '✅' };
   if (score >= 55) return { label: 'MODERATE', css: 'moderate', color: '#f59e0b', emoji: '⚠️' };
@@ -81,7 +81,7 @@ function riskLevel(score) {
   return { label: 'HIGH RISK', css: 'danger', color: '#ef4444', emoji: '🚨' };
 }
 
-/* ── VERDICT TEXT ─────────────────────────────────────────────── */
+/*  VERDICT TEXT  */
 function buildVerdict(rtScore, oRes, dRes, crimes, destLabel) {
   const rl = riskLevel(rtScore);
   const d = (destLabel || 'destination').split(',')[0];
@@ -117,7 +117,7 @@ function buildVerdict(rtScore, oRes, dRes, crimes, destLabel) {
   return { title, sub, emoji: rl.emoji, color: rl.color };
 }
 
-/* ── TIPS ─────────────────────────────────────────────────────── */
+/* TIPS  */
 function buildTips(score) {
   const all = [
     { em: '🕐', t: 'Travel during daylight', d: 'Most incidents happen between 18:00–02:00. Arrive and depart in daylight when possible.' },
@@ -132,7 +132,7 @@ function buildTips(score) {
   return all.slice(0, score >= 75 ? 3 : score >= 55 ? 4 : score >= 35 ? 5 : 6);
 }
 
-/* ── ANIMATE SCORE NUMBER ─────────────────────────────────────── */
+/*  ANIMATE SCORE NUMBER  */
 function animNum(id, target) {
   const el = document.getElementById(id);
   if (!el) return;
@@ -147,7 +147,7 @@ function animNum(id, target) {
   requestAnimationFrame(tick);
 }
 
-/* ── ANIMATE ARC ──────────────────────────────────────────────── */
+/*  ANIMATE ARC */
 function animArc(arcId, numId, score, color) {
   const arc = document.getElementById(arcId);
   const num = document.getElementById(numId);

@@ -1,7 +1,7 @@
 'use strict';
-/* ═══════════════════════════════════════════════════════════════
+/* 
    app.js — Global state, boot, analysis flow, tabs, UI helpers
-═══════════════════════════════════════════════════════════════ */
+ */
 
 const APP = {
   originLL:    null,
@@ -15,7 +15,7 @@ const APP = {
   lastScore:   null,
 };
 
-/* ── BOOT ─────────────────────────────────────────────────────── */
+/*  BOOT  */
 document.addEventListener('DOMContentLoaded', async () => {
   const msgs = ['Initializing…', 'Loading map tiles…', 'Connecting to LAPD API…', 'Ready.'];
   const fill = document.getElementById('boot-fill');
@@ -66,7 +66,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   toast('SafeRoute LA ready — type addresses or tap the map.', 'success');
 });
 
-/* ── THEME ────────────────────────────────────────────────────── */
+/*  THEME  */
 function toggleTheme() {
   const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
   document.documentElement.dataset.theme = next;
@@ -74,7 +74,7 @@ function toggleTheme() {
   applyTile();
 }
 
-/* ── TABS ─────────────────────────────────────────────────────── */
+/*  TABS */
 function switchPanel(name) {
   ['dashboard','incidents','routes','saved'].forEach(n => {
     document.getElementById(`ptab-${n}`)?.classList.toggle('active', n === name);
@@ -88,7 +88,7 @@ function switchPanel(name) {
 }
 function showSavedTab() { switchPanel('saved'); closeUserMenu(); }
 
-/* ── MOBILE ───────────────────────────────────────────────────── */
+/* MOBILE  */
 function toggleMob() {
   document.getElementById('mob-panel')?.classList.toggle('open');
   document.getElementById('ham-b')?.classList.toggle('open');
@@ -110,7 +110,7 @@ function swapInputs() {
   toast('Locations swapped.', 'info');
 }
 
-/* ── CLEAR ALL ────────────────────────────────────────────────── */
+/*  CLEAR ALL */
 function clearAll() {
   if (MAP.routeLayer) { MAP.lmap.removeLayer(MAP.routeLayer); MAP.routeLayer = null; }
   if (MAP.originMk)   { MAP.lmap.removeLayer(MAP.originMk);  MAP.originMk   = null; }
@@ -135,13 +135,13 @@ function clearAll() {
   toast('Route cleared.', 'info');
 }
 
-/* ══════════════════════════════════════════════════════════════
+/* 
    MAIN ANALYSIS FLOW
-══════════════════════════════════════════════════════════════ */
+*/
 async function runAnalysis() {
   syncMob();
 
-  // ── Resolve origin ──────────────────────────────────────────
+  //  Resolve origin 
   if (!APP.originLL) {
     const q = document.getElementById('o-inp')?.value.trim();
     if (!q) {
@@ -160,7 +160,7 @@ async function runAnalysis() {
     placePinOrigin(res[0].lat, res[0].lng);
   }
 
-  // ── Resolve destination ─────────────────────────────────────
+  // Resolve destination
   if (!APP.destLL) {
     const q = document.getElementById('d-inp')?.value.trim();
     if (!q) {
@@ -180,7 +180,7 @@ async function runAnalysis() {
     placePinDest(res[0].lat, res[0].lng);
   }
 
-  // ── Same location guard ─────────────────────────────────────
+  // Same location guard 
   if (APP.originLL && APP.destLL) {
     const dist = haversine(APP.originLL.lat, APP.originLL.lng, APP.destLL.lat, APP.destLL.lng);
     if (dist < 0.05) {
@@ -190,7 +190,7 @@ async function runAnalysis() {
     }
   }
 
-  // ── LA bounds check ─────────────────────────────────────────
+  //  LA bounds check 
   const laCheck = isRouteInLA(APP.originLL, APP.destLL);
   if (!laCheck.bothInLA) {
     hideLoader();
@@ -220,7 +220,7 @@ async function runAnalysis() {
   const btn = document.getElementById('analyze-btn');
   if (btn) btn.disabled = true;
 
-  // ── Draw route ──────────────────────────────────────────────
+  //  Draw route 
   showLoader(true, 'Calculating route…');
   let routeInfo;
   try {
@@ -234,7 +234,7 @@ async function runAnalysis() {
   const { km, min } = routeInfo;
   if (!routeInfo.ok) toast('Routing service unavailable — using straight-line fallback.', 'warn');
 
-  // ── Fetch LAPD data ─────────────────────────────────────────
+  // Fetch LAPD data 
   showLoader(true, 'Fetching LAPD crime data…');
   let crimes = [];
   try {
@@ -281,7 +281,7 @@ async function runAnalysis() {
   APP.refDate = computeRefDate(crimes);
   const refLabel = APP.refDate.toLocaleDateString('en-US', { month:'short', year:'numeric' });
 
-  // ── Score ────────────────────────────────────────────────────
+  //  Score 
   showLoader(true, 'Scoring incidents…');
   const oRes    = scoreLocation(crimes, APP.originLL.lat, APP.originLL.lng, APP.radiusKm, APP.refDate);
   const dRes    = scoreLocation(crimes, APP.destLL.lat,   APP.destLL.lng,   APP.radiusKm, APP.refDate);
@@ -293,10 +293,10 @@ async function runAnalysis() {
     ? `${dates[0].toLocaleDateString('en-US',{month:'short',year:'numeric'})} – ${dates[dates.length-1].toLocaleDateString('en-US',{month:'short',year:'numeric'})}`
     : '—';
 
-  // ── Render markers ───────────────────────────────────────────
+  // Render markers 
   renderCrimeMarkers(crimes, APP.refDate);
 
-  // ── Place main route annotation ─────────────────────────────
+  // Place main route annotation 
   // MAP._mainGJ is now reliably set inside drawRouteORS (both try + catch)
   if (MAP._mainGJ) {
     const coords = MAP._mainGJ.features[0].geometry.coordinates;
@@ -305,7 +305,7 @@ async function runAnalysis() {
     MAP.mainLabel = _mainRouteLabel(mid[1], mid[0], rtScore);
   }
 
-  // ── Show panels ──────────────────────────────────────────────
+  // Show panels 
   document.getElementById('p-empty').style.display = 'none';
   ['p-dashboard','p-incidents','p-routes','p-saved'].forEach(id => {
     const el = document.getElementById(id);
@@ -316,7 +316,7 @@ async function runAnalysis() {
 
   await sleep(60);
 
-  // ── Render dashboard ─────────────────────────────────────────
+  //  Render dashboard 
   renderScoreCards(oRes, dRes, rtScore, APP.originLabel, APP.destLabel);
   renderRouteFacts(km, min, crimes.length, period);
   renderVerdict(buildVerdict(rtScore, oRes, dRes, crimes, APP.destLabel), rtScore);
@@ -346,7 +346,7 @@ async function runAnalysis() {
   document.getElementById('panel-scroll')?.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-/* ── ERROR MODAL ──────────────────────────────────────────────── */
+/* ERROR MODAL */
 function showErrorModal(title, message) {
   document.getElementById('err-modal')?.remove();
 
@@ -383,7 +383,7 @@ function showErrorModal(title, message) {
   document.body.appendChild(overlay);
 }
 
-/* ── LOADER ───────────────────────────────────────────────────── */
+/* LOADER */
 function showLoader(_, msg) {
   const el = document.getElementById('g-loader');
   const m  = document.getElementById('g-loader-msg');
@@ -395,7 +395,7 @@ function hideLoader() {
   if (el) el.style.display = 'none';
 }
 
-/* ── TOAST ────────────────────────────────────────────────────── */
+/* TOAST  */
 function toast(msg, type = 'info') {
   const icons = { info:'fa-circle-info', success:'fa-circle-check', warn:'fa-triangle-exclamation', error:'fa-circle-exclamation' };
   const tc = document.getElementById('toasts');
@@ -407,5 +407,5 @@ function toast(msg, type = 'info') {
   setTimeout(() => { el.classList.add('t-out'); el.addEventListener('animationend', () => el.remove()); }, 5500);
 }
 
-/* ── UTILS ────────────────────────────────────────────────────── */
+/* UTILS */
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }

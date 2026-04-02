@@ -248,7 +248,7 @@ function renderRoutes(rtScore, crimes, km, min) {
     </p>`;
 }
 
-/* ── SAVED ROUTES ─────────────────────────────────────────────── */
+/* SAVED ROUTES  */
 const SAV_KEY='saferoute_saved';
 function getSaved(){try{return JSON.parse(localStorage.getItem(SAV_KEY)||'[]');}catch{return[];}}
 function saveRoute(){
