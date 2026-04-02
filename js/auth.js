@@ -24,7 +24,7 @@ function togglePw(id, btn) {
   if (!el) return;
   const show = el.type === 'password';
   el.type = show ? 'text' : 'password';
-  btn.innerHTML = `<i class="fa-solid fa-eye${show ? '-slash' : ''}"></i>`;
+  btn.innerHTML = ``;
 }
 
 function pwStrength(val) {

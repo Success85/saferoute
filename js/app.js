@@ -26,14 +26,30 @@ document.addEventListener('DOMContentLoaded', async () => {
     await sleep(i === 0 ? 200 : 380);
   }
 
-  // Light mode only — no theme switching
+  const theme = localStorage.getItem('saferoute_theme') || 'dark';
+  document.documentElement.dataset.theme = theme;
 
   initMap();
 
-  setupAC('o-inp',  'o-drop',  r => { APP.originLL = r; APP.originLabel = r.short; placePinOrigin(r.lat, r.lng); MAP.lmap.flyTo([r.lat, r.lng], 14, {duration:1}); document.getElementById('map-hint').classList.add('gone'); });
-  setupAC('d-inp',  'd-drop',  r => { APP.destLL   = r; APP.destLabel   = r.short; placePinDest(r.lat, r.lng);   document.getElementById('map-hint').classList.add('gone'); });
-  setupAC('mo-inp', 'mo-drop', r => { APP.originLL = r; APP.originLabel = r.short; setVal('o-inp', r.short); placePinOrigin(r.lat, r.lng); });
-  setupAC('md-inp', 'md-drop', r => { APP.destLL   = r; APP.destLabel   = r.short; setVal('d-inp', r.short); placePinDest(r.lat, r.lng); });
+  setupAC('o-inp', 'o-drop', r => {
+    APP.originLL = r; APP.originLabel = r.short;
+    placePinOrigin(r.lat, r.lng);
+    MAP.lmap.flyTo([r.lat, r.lng], 14, { duration: 1 });
+    document.getElementById('map-hint').classList.add('gone');
+  });
+  setupAC('d-inp', 'd-drop', r => {
+    APP.destLL = r; APP.destLabel = r.short;
+    placePinDest(r.lat, r.lng);
+    document.getElementById('map-hint').classList.add('gone');
+  });
+  setupAC('mo-inp', 'mo-drop', r => {
+    APP.originLL = r; APP.originLabel = r.short;
+    setVal('o-inp', r.short); placePinOrigin(r.lat, r.lng);
+  });
+  setupAC('md-inp', 'md-drop', r => {
+    APP.destLL = r; APP.destLabel = r.short;
+    setVal('d-inp', r.short); placePinDest(r.lat, r.lng);
+  });
 
   document.getElementById('gps-btn')?.addEventListener('click', useGPS);
 
@@ -52,8 +68,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 /* ── THEME ────────────────────────────────────────────────────── */
 function toggleTheme() {
-  // Dark mode removed — light mode only
-  toast('Light mode only in this version.', 'info');
+  const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+  document.documentElement.dataset.theme = next;
+  localStorage.setItem('saferoute_theme', next);
+  applyTile();
 }
 
 /* ── TABS ─────────────────────────────────────────────────────── */
@@ -85,8 +103,8 @@ function swapInputs() {
   const oi = document.getElementById('o-inp');
   const di = document.getElementById('d-inp');
   if (!oi || !di) return;
-  [oi.value, di.value] = [di.value, oi.value];
-  [APP.originLL, APP.destLL]     = [APP.destLL, APP.originLL];
+  [oi.value, di.value]             = [di.value, oi.value];
+  [APP.originLL,    APP.destLL]    = [APP.destLL,    APP.originLL];
   [APP.originLabel, APP.destLabel] = [APP.destLabel, APP.originLabel];
   setVal('mo-inp', oi.value); setVal('md-inp', di.value);
   toast('Locations swapped.', 'info');
@@ -126,12 +144,16 @@ async function runAnalysis() {
   // ── Resolve origin ──────────────────────────────────────────
   if (!APP.originLL) {
     const q = document.getElementById('o-inp')?.value.trim();
-    if (!q) { showErrorModal('Missing Origin', 'Please enter an origin address or tap the map to set a starting point.'); return; }
+    if (!q) {
+      showErrorModal('Missing Origin', 'Please enter an origin address.');
+      return;
+    }
     showLoader(true, 'Geocoding origin…');
-    const res = await geocodeForward(q).catch(() => null);
+    let res;
+    try { res = await geocodeForward(q); } catch { res = null; }
     if (!res?.length) {
       hideLoader();
-      showErrorModal('Origin Not Found', `Could not find "${q}" in Los Angeles. Try a more specific street address or neighbourhood name.`);
+      showErrorModal('Origin Not Found', `"${q}" could not be found in Los Angeles.\n\nTry a more specific street address, neighbourhood, or landmark name.`);
       return;
     }
     APP.originLL = res[0]; APP.originLabel = res[0].short;
@@ -141,26 +163,57 @@ async function runAnalysis() {
   // ── Resolve destination ─────────────────────────────────────
   if (!APP.destLL) {
     const q = document.getElementById('d-inp')?.value.trim();
-    if (!q) { hideLoader(); showErrorModal('Missing Destination', 'Please enter a destination address or tap the map to set your destination.'); return; }
+    if (!q) {
+      hideLoader();
+      showErrorModal('Missing Destination', 'Please enter a destination address.');
+      return;
+    }
     showLoader(true, 'Geocoding destination…');
-    const res = await geocodeForward(q).catch(() => null);
+    let res;
+    try { res = await geocodeForward(q); } catch { res = null; }
     if (!res?.length) {
       hideLoader();
-      showErrorModal('Destination Not Found', `Could not find "${q}" in Los Angeles. Try a more specific street address or neighbourhood name.`);
+      showErrorModal('Destination Not Found', `"${q}" could not be found in Los Angeles.\n\nTry a more specific street address, neighbourhood, or landmark name.`);
       return;
     }
     APP.destLL = res[0]; APP.destLabel = res[0].short;
     placePinDest(res[0].lat, res[0].lng);
   }
 
-  // Same location check
+  // ── Same location guard ─────────────────────────────────────
   if (APP.originLL && APP.destLL) {
-    const d = haversine(APP.originLL.lat, APP.originLL.lng, APP.destLL.lat, APP.destLL.lng);
-    if (d < 0.05) {
+    const dist = haversine(APP.originLL.lat, APP.originLL.lng, APP.destLL.lat, APP.destLL.lng);
+    if (dist < 0.05) {
       hideLoader();
-      showErrorModal('Same Location', 'Origin and destination appear to be the same place. Please choose two different locations.');
+      showErrorModal('Same Location', 'Origin and destination appear to be the same place.\n\nPlease choose two different locations to assess a route between them.');
       return;
     }
+  }
+
+  // ── LA bounds check ─────────────────────────────────────────
+  const laCheck = isRouteInLA(APP.originLL, APP.destLL);
+  if (!laCheck.bothInLA) {
+    hideLoader();
+    if (!laCheck.originInLA) {
+      if (MAP.originMk) { MAP.lmap.removeLayer(MAP.originMk); MAP.originMk = null; }
+      APP.originLL = null; APP.originLabel = '';
+      setVal('o-inp', ''); setVal('mo-inp', '');
+    }
+    if (!laCheck.destInLA) {
+      if (MAP.destMk) { MAP.lmap.removeLayer(MAP.destMk); MAP.destMk = null; }
+      APP.destLL = null; APP.destLabel = '';
+      setVal('d-inp', ''); setVal('md-inp', '');
+    }
+    const who = !laCheck.originInLA && !laCheck.destInLA
+      ? 'Both locations are'
+      : !laCheck.originInLA
+        ? 'Your origin is'
+        : 'Your destination is';
+    showErrorModal(
+      'Outside Los Angeles',
+      who + ' outside the area covered by LAPD crime data.\n\nThis app only analyzes routes within Los Angeles city limits. Please enter addresses within LA or any LA neighbourhood.'
+    );
+    return;
   }
 
   document.getElementById('map-hint').classList.add('gone');
@@ -175,11 +228,11 @@ async function runAnalysis() {
   } catch (err) {
     hideLoader();
     if (btn) btn.disabled = false;
-    showErrorModal('Routing Failed', 'Could not calculate a route between these locations. Please check that both addresses are valid road locations in Los Angeles.');
+    showErrorModal('Routing Failed', 'Could not calculate a driving route between these locations.\n\nThis may mean the addresses are not on a road network. Please check both locations and try again.');
     return;
   }
   const { km, min } = routeInfo;
-  if (!routeInfo.ok) toast('Using straight-line fallback — ORS routing unavailable.', 'warn');
+  if (!routeInfo.ok) toast('Routing service unavailable — using straight-line fallback.', 'warn');
 
   // ── Fetch LAPD data ─────────────────────────────────────────
   showLoader(true, 'Fetching LAPD crime data…');
@@ -190,14 +243,38 @@ async function runAnalysis() {
     hideLoader();
     if (btn) btn.disabled = false;
     showErrorModal(
-      'LAPD API Error',
-      `Could not fetch crime data from the LAPD database. This is usually a temporary issue.\n\nError: ${err.message}\n\nPlease wait a moment and try again.`
+      'LAPD Data Unavailable',
+      `Could not fetch crime data from the LAPD database.\n\nThis is usually a temporary issue. Please wait a moment and try again.\n\nDetails: ${err.message}`
     );
     return;
   }
 
   if (crimes.length === 0) {
-    toast('No crime records found in this corridor — the area may be outside LAPD coverage.', 'warn');
+    const oLbl = (APP.originLabel || '').toLowerCase();
+    const dLbl = (APP.destLabel   || '').toLowerCase();
+    const laKw = ['los angeles','hollywood','downtown','westwood','venice',
+      'santa monica','compton','inglewood','burbank','pasadena','glendale',
+      'torrance','long beach','culver','koreatown','silverlake','echo park',
+      'highland','boyle heights','watts','crenshaw','wilshire','sunset',
+      'broadway','figueroa','vermont','sepulveda','la brea','fairfax'];
+    const looksLikeLA = laKw.some(k => oLbl.includes(k) || dLbl.includes(k));
+    if (!looksLikeLA) {
+      hideLoader();
+      if (btn) btn.disabled = false;
+      if (MAP.routeLayer) { MAP.lmap.removeLayer(MAP.routeLayer); MAP.routeLayer = null; }
+      if (MAP.mainLabel)  { MAP.lmap.removeLayer(MAP.mainLabel);  MAP.mainLabel  = null; }
+      if (MAP.originMk)   { MAP.lmap.removeLayer(MAP.originMk);  MAP.originMk   = null; }
+      if (MAP.destMk)     { MAP.lmap.removeLayer(MAP.destMk);    MAP.destMk     = null; }
+      APP.originLL = null; APP.destLL = null;
+      APP.originLabel = ''; APP.destLabel = '';
+      setVal('o-inp',''); setVal('d-inp',''); setVal('mo-inp',''); setVal('md-inp','');
+      showErrorModal(
+        'No LAPD Data Found',
+        'No crime records were found for this route.\n\nThis means the locations are likely outside LAPD coverage. A score of 100% here is not meaningful — it simply means no data was found, not that the area is safe.\n\nPlease enter valid Los Angeles addresses and try again.'
+      );
+      return;
+    }
+    toast('No crime records found — this corridor may have very low activity.', 'info');
   }
 
   APP.crimes  = crimes;
@@ -219,7 +296,8 @@ async function runAnalysis() {
   // ── Render markers ───────────────────────────────────────────
   renderCrimeMarkers(crimes, APP.refDate);
 
-  // ── Place main route annotation label ───────────────────────
+  // ── Place main route annotation ─────────────────────────────
+  // MAP._mainGJ is now reliably set inside drawRouteORS (both try + catch)
   if (MAP._mainGJ) {
     const coords = MAP._mainGJ.features[0].geometry.coordinates;
     const mid    = coords[Math.floor(coords.length / 2)];
@@ -249,6 +327,7 @@ async function runAnalysis() {
   renderDistricts(crimes);
   renderTips(buildTips(rtScore));
   renderIncidents(crimes, APP.refDate);
+  renderExportBar();
   renderRoutes(rtScore, crimes, km, min);
 
   document.querySelectorAll('.sc-card,.rt-card,.cc,.verdict').forEach((el, i) => {
@@ -269,61 +348,38 @@ async function runAnalysis() {
 
 /* ── ERROR MODAL ──────────────────────────────────────────────── */
 function showErrorModal(title, message) {
-  // Remove any existing error modal
   document.getElementById('err-modal')?.remove();
 
   const overlay = document.createElement('div');
   overlay.id = 'err-modal';
-  overlay.style.cssText = `
-    position:fixed;inset:0;z-index:9000;
-    display:flex;align-items:center;justify-content:center;
-    background:rgba(0,0,0,.72);backdrop-filter:blur(6px);
-    padding:20px;animation:errIn .25s ease;
-  `;
+  overlay.style.cssText = [
+    'position:fixed;inset:0;z-index:9000',
+    'display:flex;align-items:center;justify-content:center',
+    'background:rgba(0,0,0,.72);backdrop-filter:blur(6px)',
+    'padding:20px',
+  ].join(';');
 
   overlay.innerHTML = `
-    <style>@keyframes errIn{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:none}}</style>
-    <div style="
-      background:var(--card);border:1px solid var(--bord2);
-      border-top:3px solid #ef4444;
-      border-radius:14px;padding:28px 26px;
-      width:100%;max-width:420px;
-      box-shadow:0 24px 80px rgba(0,0,0,.6);
-      font-family:'Outfit',sans-serif;
-    ">
+    <style>@keyframes errIn{from{opacity:0;transform:scale(.95) translateY(8px)}to{opacity:1;transform:none}}</style>
+    <div style="background:var(--card);border:1px solid var(--bord2);border-top:3px solid #ef4444;border-radius:14px;padding:28px 26px;width:100%;max-width:420px;box-shadow:0 24px 80px rgba(0,0,0,.6);font-family:'Outfit',sans-serif;animation:errIn .25s cubic-bezier(.16,1,.3,1)">
       <div style="display:flex;align-items:flex-start;gap:14px;margin-bottom:16px">
-        <div style="
-          width:38px;height:38px;border-radius:50%;
-          background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);
-          display:flex;align-items:center;justify-content:center;
-          flex-shrink:0;font-size:1.1rem;color:#ef4444;
-        ">
+        <div style="width:40px;height:40px;border-radius:50%;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#ef4444;font-size:1.1rem">
           <i class="fa-solid fa-circle-exclamation"></i>
         </div>
-        <div>
-          <div style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:.08em;color:var(--text);margin-bottom:6px">${xss(title)}</div>
-          <div style="font-size:.82rem;color:var(--text2);line-height:1.65;white-space:pre-line">${xss(message)}</div>
+        <div style="flex:1">
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:1.15rem;letter-spacing:.08em;color:var(--text);margin-bottom:8px">${xss(title)}</div>
+          <div style="font-size:.82rem;color:var(--text2);line-height:1.7;white-space:pre-line">${xss(message)}</div>
         </div>
       </div>
-      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:20px">
-        <button onclick="document.getElementById('err-modal').remove()" style="
-          padding:9px 22px;border-radius:7px;
-          background:linear-gradient(135deg,#ef4444,#dc2626);
-          color:#fff;border:none;cursor:pointer;
-          font-family:'Bebas Neue',sans-serif;font-size:.95rem;letter-spacing:.08em;
-          box-shadow:0 3px 12px rgba(239,68,68,.35);
-          transition:opacity .15s;
-        " onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+      <div style="display:flex;justify-content:flex-end;margin-top:20px">
+        <button id="err-dismiss" style="padding:9px 24px;border-radius:7px;background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;border:none;cursor:pointer;font-family:'Bebas Neue',sans-serif;font-size:.95rem;letter-spacing:.1em;box-shadow:0 3px 12px rgba(239,68,68,.35)">
           DISMISS
         </button>
       </div>
     </div>`;
 
-  // Click backdrop to dismiss
-  overlay.addEventListener('click', e => {
-    if (e.target === overlay) overlay.remove();
-  });
-
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  overlay.querySelector('#err-dismiss').addEventListener('click', () => overlay.remove());
   document.body.appendChild(overlay);
 }
 

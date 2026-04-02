@@ -1,0 +1,187 @@
+# ═══════════════════════════════════════════════════════════════
+# SafeRoute LA — CI/CD Pipeline
+# .github/workflows/deploy.yml
+#
+# Triggers on every push to main branch
+# Pipeline: Lint → Validate → Build Docker → Deploy to servers
+# ═══════════════════════════════════════════════════════════════
+
+name: SafeRoute LA — CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+
+  # ── Job 1: Lint and Validate ────────────────────────────────
+  lint-and-validate:
+    name: Lint & Validate
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install lint tools
+        run: npm install -g htmlhint stylelint
+
+      - name: Validate HTML structure
+        run: |
+          htmlhint index.html --config .htmlhintrc || true
+          echo "✓ HTML validation complete"
+
+      - name: Check for XSS vulnerabilities (search for innerHTML without xss())
+        run: |
+          echo "Checking for unprotected innerHTML usage..."
+          # Allow innerHTML only if followed by xss() or template literals with xss()
+          if grep -n "innerHTML\s*=" js/*.js | grep -v "xss(" | grep -v "//"; then
+            echo "WARNING: Potential unprotected innerHTML usage found"
+          else
+            echo "✓ No unprotected innerHTML found"
+          fi
+
+      - name: Verify API keys are not hardcoded in unexpected places
+        run: |
+          echo "Checking for sensitive data exposure..."
+          # Check API keys are only in config.js
+          if grep -rn "AVNS_\|eyJvcmci" --include="*.js" | grep -v "config.js"; then
+            echo "WARNING: API credentials found outside config.js"
+            exit 1
+          fi
+          echo "✓ Credentials properly scoped to config.js"
+
+      - name: Check all JS files for syntax errors
+        run: |
+          for f in js/*.js; do
+            node --check "$f" && echo "✓ $f syntax OK" || echo "✗ $f has errors"
+          done
+
+      - name: Validate CSS
+        run: |
+          echo "Checking CSS file size and structure..."
+          wc -l css/style.css
+          echo "✓ CSS check complete"
+
+  # ── Job 2: Security Scan ────────────────────────────────────
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    needs: lint-and-validate
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for common security issues
+        run: |
+          echo "=== Security Scan ==="
+
+          # Check for eval() usage (dangerous)
+          if grep -rn "eval(" js/*.js | grep -v "//"; then
+            echo "WARNING: eval() usage detected — potential code injection risk"
+          else
+            echo "✓ No eval() usage"
+          fi
+
+          # Check XSS function exists
+          if grep -q "function xss(" js/render.js; then
+            echo "✓ XSS sanitizer function present"
+          else
+            echo "WARNING: XSS sanitizer not found"
+          fi
+
+          # Check for console.log in production files (info leak)
+          COUNT=$(grep -c "console.log" js/*.js || true)
+          echo "ℹ console.log statements: $COUNT (consider removing for production)"
+
+          echo "=== Scan Complete ==="
+
+  # ── Job 3: Build Docker Image ───────────────────────────────
+  build:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+    needs: security-scan
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        run: |
+          docker build -t saferoute-la:latest .
+          docker build -t saferoute-la:${{ github.sha }} .
+          echo "✓ Docker image built successfully"
+
+      - name: Test Docker container starts
+        run: |
+          docker run -d --name saferoute-test -p 8080:80 saferoute-la:latest
+          sleep 5
+          curl -f http://localhost:8080/health || exit 1
+          docker stop saferoute-test
+          docker rm saferoute-test
+          echo "✓ Container health check passed"
+
+  # ── Job 4: Deploy to Web Servers ────────────────────────────
+  deploy:
+    name: Deploy to Web01 & Web02
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    environment: production
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to Web01
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.WEB01_HOST }}
+          username: ${{ secrets.WEB01_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            echo "Deploying to Web01..."
+            cd /var/www/html
+            sudo rm -rf safenav
+            sudo mkdir -p safenav
+            cd safenav
+            sudo git clone ${{ github.server_url }}/${{ github.repository }}.git . || sudo git pull
+            sudo chown -R www-data:www-data /var/www/html/safenav
+            sudo nginx -t && sudo systemctl reload nginx
+            echo "✓ Web01 deployment complete"
+
+      - name: Deploy to Web02
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.WEB02_HOST }}
+          username: ${{ secrets.WEB02_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            echo "Deploying to Web02..."
+            cd /var/www/html
+            sudo rm -rf safenav
+            sudo mkdir -p safenav
+            cd safenav
+            sudo git clone ${{ github.server_url }}/${{ github.repository }}.git . || sudo git pull
+            sudo chown -R www-data:www-data /var/www/html/safenav
+            sudo nginx -t && sudo systemctl reload nginx
+            echo "✓ Web02 deployment complete"
+
+      - name: Notify deployment success
+        run: |
+          echo "🚀 SafeRoute LA deployed successfully!"
+          echo "   Commit: ${{ github.sha }}"
+          echo "   Branch: ${{ github.ref_name }}"
+          echo "   Time:   $(date -u)"

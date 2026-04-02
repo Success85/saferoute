@@ -40,3 +40,14 @@ function classifyCrime(desc) {
   if (PROPERTY_KW.some(k => u.includes(k))) return 'property';
   return 'other';
 }
+
+/* ── LA bounds check helpers ─────────────────────────────────── */
+function isInLA(lat, lng) {
+  const b = CFG.LA_BOUNDS;
+  return lat >= b.minLat && lat <= b.maxLat && lng >= b.minLng && lng <= b.maxLng;
+}
+function isRouteInLA(oLL, dLL) {
+  const oIn = isInLA(oLL.lat, oLL.lng);
+  const dIn = isInLA(dLL.lat, dLL.lng);
+  return { originInLA: oIn, destInLA: dIn, bothInLA: oIn && dIn };
+}

@@ -237,14 +237,14 @@ function renderRoutes(rtScore, crimes, km, min) {
     <div class="route-opt best" style="border-left:4px solid ${ALT1_COLOR}">
       <div class="ro-score" style="color:${ALT1_COLOR}">${scoreA}%</div>
       <div class="ro-body">
-        <div class="ro-name" style="color:${ALT1_COLOR}">Alternative Route — Recommended</div>
+        <div class="ro-name" style="color:${ALT1_COLOR}">Alternative Route</div>
         <div class="ro-detail">Shown on map · Shorter path · Lower crime density</div>
       </div>
       <span class="sc-badge ${rl1.css}">${rl1.label}</span>
     </div>
     <p style="font-size:.68rem;color:var(--text3);margin-top:12px;line-height:1.6">
       <i class="fa-solid fa-circle-info" style="color:var(--amber);margin-right:5px"></i>
-      Alternative score estimated from adjacent corridor crime density · LAPD 2020–2024
+      Alternative score estimated from adjacent corridor crime density · LAPD 2024
     </p>`;
 }
 
