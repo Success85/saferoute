@@ -171,7 +171,10 @@ function renderIncidents(crimes,refDate){
     </div>`;
   }).join('');
 }
-function refilter(){if(APP.crimes?.length)renderIncidents(APP.crimes,APP.refDate);}
+function refilter() {
+  const list = APP.routeCrimes?.length ? APP.routeCrimes : APP.crimes;
+  if (list?.length) renderIncidents(list, APP.refDate);
+}
 
 /* ── ROUTES PANEL ─────────────────────────────────────────────── */
 function renderRoutes(rtScore, crimes, km, min) {
@@ -259,7 +262,7 @@ function loadSavedRoutes(){
   const saved=getSaved();
   const el=document.getElementById('saved-out');
   if(!el)return;
-  if(!saved.length){el.innerHTML='<p class="no-data">No saved routes yet.</p>';return;}
+  if(!saved.length){el.innerHTML='<p class="no-data">No saved routes yet. This feature is coming soon!</p>';return;}
   el.innerHTML=saved.map(r=>{
     const rl=riskLevel(r.score);
     return `<div class="saved-item">

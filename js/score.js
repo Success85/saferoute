@@ -160,3 +160,29 @@ function animArc(arcId, numId, score, color) {
   animNum(numId, score);
   if (num) num.style.color = color;
 }
+
+function filterRouteCrimes(crimes, originLL, destLL, radiusKm) {
+  return crimes.filter(c => {
+    if (!c.lat || !c.lng) return false;
+
+    // Check distance from origin
+    const dOrigin = haversine(originLL.lat, originLL.lng, c.lat, c.lng);
+    if (dOrigin <= radiusKm) return true;
+
+    // Check distance from destination
+    const dDest = haversine(destLL.lat, destLL.lng, c.lat, c.lng);
+    if (dDest <= radiusKm) return true;
+
+    // Check distance from midpoints along the corridor
+    // Sample 8 points evenly along the route line
+    for (let i = 1; i <= 7; i++) {
+      const t      = i / 8;
+      const midLat = originLL.lat + (destLL.lat - originLL.lat) * t;
+      const midLng = originLL.lng + (destLL.lng - originLL.lng) * t;
+      const dMid   = haversine(midLat, midLng, c.lat, c.lng);
+      if (dMid <= radiusKm) return true;
+    }
+
+    return false;
+  });
+}
