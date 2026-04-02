@@ -1,10 +1,8 @@
 'use strict';
 /* ═══════════════════════════════════════════════════════════════
-   app.js — Global state, boot sequence, analysis flow,
-            tabs, mobile menu, theme, UI helpers
+   app.js — Global state, boot, analysis flow, tabs, UI helpers
 ═══════════════════════════════════════════════════════════════ */
 
-/* ── GLOBAL APP STATE ─────────────────────────────────────────── */
 const APP = {
   originLL:    null,
   destLL:      null,
@@ -20,67 +18,51 @@ const APP = {
 /* ── BOOT ─────────────────────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', async () => {
   const msgs = ['Initializing…', 'Loading map tiles…', 'Connecting to LAPD API…', 'Ready.'];
-  const fill  = document.getElementById('boot-fill');
-  const msg   = document.getElementById('boot-msg');
-
-  // Animate boot bar
+  const fill = document.getElementById('boot-fill');
+  const msg  = document.getElementById('boot-msg');
   for (let i = 0; i < msgs.length; i++) {
     if (fill) fill.style.width = `${((i+1)/msgs.length)*100}%`;
     if (msg)  msg.textContent  = msgs[i];
     await sleep(i === 0 ? 200 : 380);
   }
 
-  // Apply saved theme
   const theme = localStorage.getItem('saferoute_theme') || 'dark';
   document.documentElement.dataset.theme = theme;
 
-  // Init map
   initMap();
 
-  // Wire autocomplete — desktop
   setupAC('o-inp', 'o-drop', r => {
     APP.originLL = r; APP.originLabel = r.short;
     placePinOrigin(r.lat, r.lng);
     MAP.lmap.flyTo([r.lat, r.lng], 14, { duration: 1 });
-    MAP.tapCount = 1;
     document.getElementById('map-hint').classList.add('gone');
   });
   setupAC('d-inp', 'd-drop', r => {
     APP.destLL = r; APP.destLabel = r.short;
     placePinDest(r.lat, r.lng);
-    MAP.tapCount = 0;
     document.getElementById('map-hint').classList.add('gone');
   });
-  // Mobile
   setupAC('mo-inp', 'mo-drop', r => {
     APP.originLL = r; APP.originLabel = r.short;
-    setVal('o-inp', r.short);
-    placePinOrigin(r.lat, r.lng); MAP.tapCount = 1;
+    setVal('o-inp', r.short); placePinOrigin(r.lat, r.lng);
   });
   setupAC('md-inp', 'md-drop', r => {
     APP.destLL = r; APP.destLabel = r.short;
-    setVal('d-inp', r.short);
-    placePinDest(r.lat, r.lng); MAP.tapCount = 0;
+    setVal('d-inp', r.short); placePinDest(r.lat, r.lng);
   });
 
-  // GPS
   document.getElementById('gps-btn')?.addEventListener('click', useGPS);
 
-  // Enter-key triggers analysis
   ['o-inp','d-inp','mo-inp','md-inp'].forEach(id => {
     document.getElementById(id)?.addEventListener('keydown', e => {
       if (e.key === 'Enter') { syncMob(); runAnalysis(); }
     });
   });
 
-  // Fade out boot screen
   await sleep(200);
   document.getElementById('boot-screen').classList.add('out');
-
-  // Show panel — dashboard is default
   switchPanel('dashboard');
   document.getElementById('fab-markers').classList.add('active');
-
   toast('SafeRoute LA ready — type addresses or tap the map.', 'success');
 });
 
@@ -100,50 +82,46 @@ function switchPanel(name) {
     if (p) p.style.display = n === name ? 'block' : 'none';
   });
   const empty = document.getElementById('p-empty');
-  if (empty) empty.style.display = 'none'; // Hide once user switches tabs (may or may not have data)
+  if (empty) empty.style.display = 'none';
   if (name === 'incidents' && APP.crimes.length) renderIncidents(APP.crimes, APP.refDate);
   if (name === 'saved') loadSavedRoutes();
 }
-
 function showSavedTab() { switchPanel('saved'); closeUserMenu(); }
 
-/* ── MOBILE MENU ──────────────────────────────────────────────── */
+/* ── MOBILE ───────────────────────────────────────────────────── */
 function toggleMob() {
   document.getElementById('mob-panel')?.classList.toggle('open');
   document.getElementById('ham-b')?.classList.toggle('open');
 }
-
 function syncMob() {
   const mo = document.getElementById('mo-inp')?.value.trim();
   const md = document.getElementById('md-inp')?.value.trim();
   if (mo) { setVal('o-inp', mo); if (!APP.originLL) APP.originLabel = mo; }
   if (md) { setVal('d-inp', md); if (!APP.destLL)   APP.destLabel   = md; }
 }
-
-/* ── SWAP INPUTS ──────────────────────────────────────────────── */
 function swapInputs() {
   const oi = document.getElementById('o-inp');
   const di = document.getElementById('d-inp');
   if (!oi || !di) return;
-  [oi.value, di.value]           = [di.value, oi.value];
-  [APP.originLL, APP.destLL]     = [APP.destLL, APP.originLL];
+  [oi.value, di.value]             = [di.value, oi.value];
+  [APP.originLL,    APP.destLL]    = [APP.destLL,    APP.originLL];
   [APP.originLabel, APP.destLabel] = [APP.destLabel, APP.originLabel];
-  setVal('mo-inp', oi.value);
-  setVal('md-inp', di.value);
+  setVal('mo-inp', oi.value); setVal('md-inp', di.value);
   toast('Locations swapped.', 'info');
 }
 
 /* ── CLEAR ALL ────────────────────────────────────────────────── */
 function clearAll() {
   if (MAP.routeLayer) { MAP.lmap.removeLayer(MAP.routeLayer); MAP.routeLayer = null; }
-  if (MAP.originMk)   { MAP.lmap.removeLayer(MAP.originMk);  MAP.originMk = null; }
-  if (MAP.destMk)     { MAP.lmap.removeLayer(MAP.destMk);    MAP.destMk   = null; }
+  if (MAP.originMk)   { MAP.lmap.removeLayer(MAP.originMk);  MAP.originMk   = null; }
+  if (MAP.destMk)     { MAP.lmap.removeLayer(MAP.destMk);    MAP.destMk     = null; }
+  if (MAP.mainLabel)  { MAP.lmap.removeLayer(MAP.mainLabel); MAP.mainLabel  = null; }
+  MAP._mainGJ = null;
   clearCrimeMarkers();
-  clearAltRoutes(); 
+  clearAltRoutes();
   APP.originLL = null; APP.destLL = null;
   APP.originLabel = ''; APP.destLabel = '';
   APP.crimes = []; APP.refDate = null;
-  MAP.tapCount = 0;
   ['o-inp','d-inp','mo-inp','md-inp'].forEach(id => setVal(id, ''));
   document.getElementById('map-hint')?.classList.remove('gone');
   const empt = document.getElementById('p-empty');
@@ -166,38 +144,69 @@ async function runAnalysis() {
   // ── Resolve origin ──────────────────────────────────────────
   if (!APP.originLL) {
     const q = document.getElementById('o-inp')?.value.trim();
-    if (!q) { toast('Please enter an origin address or tap the map.', 'warn'); return; }
+    if (!q) {
+      showErrModal('Missing Origin', 'Please enter an origin address or tap the map to set your starting point.');
+      return;
+    }
     showLoader(true, 'Geocoding origin…');
-    const res = await geocodeForward(q);
-    if (!res?.length) { hideLoader(); toast('Origin not found in Los Angeles. Try a more specific address.', 'error'); return; }
+    let res;
+    try { res = await geocodeForward(q); } catch { res = null; }
+    if (!res?.length) {
+      hideLoader();
+      showErrModal('Location Not Found', `This location could not be found in Los Angeles.\n\nTry a more specific street address, neighbourhood, or landmark name.`);
+      return;
+    }
     APP.originLL = res[0]; APP.originLabel = res[0].short;
     placePinOrigin(res[0].lat, res[0].lng);
-    MAP.tapCount = 1;
   }
 
   // ── Resolve destination ─────────────────────────────────────
   if (!APP.destLL) {
     const q = document.getElementById('d-inp')?.value.trim();
-    if (!q) { hideLoader(); toast('Please enter a destination address.', 'warn'); return; }
+    if (!q) {
+      hideLoader();
+      showErrModal('Missing Destination', 'Please enter a destination address or tap the map to set your destination.');
+      return;
+    }
     showLoader(true, 'Geocoding destination…');
-    const res = await geocodeForward(q);
-    if (!res?.length) { hideLoader(); toast('Destination not found in Los Angeles. Try a more specific address.', 'error'); return; }
+    let res;
+    try { res = await geocodeForward(q); } catch { res = null; }
+    if (!res?.length) {
+      hideLoader();
+      showErrModal('Location Not Found', `"" This location could not be found in Los Angeles.\n\nTry a more specific street address, neighbourhood, or landmark name.`);
+      return;
+    }
     APP.destLL = res[0]; APP.destLabel = res[0].short;
     placePinDest(res[0].lat, res[0].lng);
-    MAP.tapCount = 0;
+  }
+
+  // ── Same location guard ─────────────────────────────────────
+  if (APP.originLL && APP.destLL) {
+    const dist = haversine(APP.originLL.lat, APP.originLL.lng, APP.destLL.lat, APP.destLL.lng);
+    if (dist < 0.05) {
+      hideLoader();
+      showErrModal('Same Location', 'Origin and destination appear to be the same place.\n\nPlease choose two different locations to assess a route between them.');
+      return;
+    }
   }
 
   document.getElementById('map-hint').classList.add('gone');
-
   const btn = document.getElementById('analyze-btn');
   if (btn) btn.disabled = true;
 
   // ── Draw route ──────────────────────────────────────────────
-  showLoader(true, 'Calculating route via OpenRouteService…');
-  const routeInfo = await drawRouteORS(APP.originLL, APP.destLL);
-  const km  = routeInfo.km;
-  const min = routeInfo.min;
-  if (!routeInfo.ok) toast('ORS routing unavailable — using straight-line fallback.', 'warn');
+  showLoader(true, 'Calculating route…');
+  let routeInfo;
+  try {
+    routeInfo = await drawRouteORS(APP.originLL, APP.destLL);
+  } catch (err) {
+    hideLoader();
+    if (btn) btn.disabled = false;
+    showErrModal('Routing Failed', 'Could not calculate a driving route between these locations.\n\nThis may mean the addresses are not on a road network. Please check both locations and try again.');
+    return;
+  }
+  const { km, min } = routeInfo;
+  if (!routeInfo.ok) toast('Routing service unavailable — using straight-line fallback.', 'warn');
 
   // ── Fetch LAPD data ─────────────────────────────────────────
   showLoader(true, 'Fetching LAPD crime data…');
@@ -207,31 +216,44 @@ async function runAnalysis() {
   } catch (err) {
     hideLoader();
     if (btn) btn.disabled = false;
-    toast('LAPD API error: ' + err.message, 'error');
-    console.error(err);
+    showErrModal(
+      'LAPD Data Unavailable',
+      `Could not fetch crime data from the LAPD database.\n\nThis is usually a temporary issue. Please wait a moment and try again.\n\nDetails: ${err.message}`
+    );
     return;
   }
-  APP.crimes = crimes;
 
-  // ── Compute dataset reference date ──────────────────────────
+  if (crimes.length === 0) {
+    toast('No crime records found in this corridor. The area may be outside LAPD coverage.', 'warn');
+  }
+
+  APP.crimes  = crimes;
   APP.refDate = computeRefDate(crimes);
-  const refLabel = APP.refDate.toLocaleDateString('en-US',{month:'short',year:'numeric'});
+  const refLabel = APP.refDate.toLocaleDateString('en-US', { month:'short', year:'numeric' });
 
   // ── Score ────────────────────────────────────────────────────
-  showLoader(true, `Scoring ${crimes.length} incidents…`);
+  showLoader(true, 'Scoring incidents…');
   const oRes    = scoreLocation(crimes, APP.originLL.lat, APP.originLL.lng, APP.radiusKm, APP.refDate);
   const dRes    = scoreLocation(crimes, APP.destLL.lat,   APP.destLL.lng,   APP.radiusKm, APP.refDate);
   const rtScore = calcRouteScore(oRes.score, dRes.score, crimes);
   APP.lastScore = rtScore;
 
-  // Period
   const dates  = crimes.filter(c=>c.date).map(c=>c.date).sort((a,b)=>a-b);
   const period = dates.length
     ? `${dates[0].toLocaleDateString('en-US',{month:'short',year:'numeric'})} – ${dates[dates.length-1].toLocaleDateString('en-US',{month:'short',year:'numeric'})}`
     : '—';
 
-  // ── Render crime markers ─────────────────────────────────────
+  // ── Render markers ───────────────────────────────────────────
   renderCrimeMarkers(crimes, APP.refDate);
+
+  // ── Place main route annotation ─────────────────────────────
+  // MAP._mainGJ is now reliably set inside drawRouteORS (both try + catch)
+  if (MAP._mainGJ) {
+    const coords = MAP._mainGJ.features[0].geometry.coordinates;
+    const mid    = coords[Math.floor(coords.length / 2)];
+    if (MAP.mainLabel) { MAP.lmap.removeLayer(MAP.mainLabel); MAP.mainLabel = null; }
+    MAP.mainLabel = _mainRouteLabel(mid[1], mid[0], rtScore);
+  }
 
   // ── Show panels ──────────────────────────────────────────────
   document.getElementById('p-empty').style.display = 'none';
@@ -240,7 +262,6 @@ async function runAnalysis() {
     if (el) el.style.display = id === 'p-dashboard' ? 'block' : 'none';
   });
   switchPanel('dashboard');
-
   setText('map-status', `Latest: ${refLabel} · LAPD 2020–2024`);
 
   await sleep(60);
@@ -258,8 +279,7 @@ async function runAnalysis() {
   renderIncidents(crimes, APP.refDate);
   renderRoutes(rtScore, crimes, km, min);
 
-  // Stagger card animations
-  document.querySelectorAll('.sc-card,.rt-card,.cc,.verdict').forEach((el,i) => {
+  document.querySelectorAll('.sc-card,.rt-card,.cc,.verdict').forEach((el, i) => {
     el.style.animationDelay = `${i*.04}s`;
     el.classList.remove('fu'); void el.offsetWidth; el.classList.add('fu');
   });
@@ -269,11 +289,47 @@ async function runAnalysis() {
 
   const rl = riskLevel(rtScore);
   toast(
-    `Analysis complete · ${crimes.length} incidents · Score: ${rtScore}/100 (${rl.label})`,
+    `Analysis complete · Score: ${rtScore}/100 (${rl.label})`,
     rtScore >= 65 ? 'success' : rtScore >= 45 ? 'warn' : 'error'
   );
-
   document.getElementById('panel-scroll')?.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/* ── ERROR MODAL ──────────────────────────────────────────────── */
+function showErrModal(title, message) {
+  document.getElementById('err-modal')?.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'err-modal';
+  overlay.style.cssText = [
+    'position:fixed;inset:0;z-index:9000',
+    'display:flex;align-items:center;justify-content:center',
+    'background:rgba(0,0,0,.72);backdrop-filter:blur(6px)',
+    'padding:20px',
+  ].join(';');
+
+  overlay.innerHTML = `
+    <style>@keyframes errIn{from{opacity:0;transform:scale(.95) translateY(8px)}to{opacity:1;transform:none}}</style>
+    <div style="background:var(--card);border:1px solid var(--bord2);border-top:3px solid #ef4444;border-radius:14px;padding:28px 26px;width:100%;max-width:420px;box-shadow:0 24px 80px rgba(0,0,0,.6);font-family:'Outfit',sans-serif;animation:errIn .25s cubic-bezier(.16,1,.3,1)">
+      <div style="display:flex;align-items:flex-start;gap:14px;margin-bottom:16px">
+        <div style="width:40px;height:40px;border-radius:50%;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#ef4444;font-size:1.1rem">
+          <i class="fa-solid fa-circle-exclamation"></i>
+        </div>
+        <div style="flex:1">
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:1.15rem;letter-spacing:.08em;color:var(--text);margin-bottom:8px">${xss(title)}</div>
+          <div style="font-size:.82rem;color:var(--text2);line-height:1.7;white-space:pre-line">${xss(message)}</div>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;margin-top:20px">
+        <button id="err-dismiss" style="padding:9px 24px;border-radius:7px;background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;border:none;cursor:pointer;font-family:'Bebas Neue',sans-serif;font-size:.95rem;letter-spacing:.1em;box-shadow:0 3px 12px rgba(239,68,68,.35)">
+          DISMISS
+        </button>
+      </div>
+    </div>`;
+
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  overlay.querySelector('#err-dismiss').addEventListener('click', () => overlay.remove());
+  document.body.appendChild(overlay);
 }
 
 /* ── LOADER ───────────────────────────────────────────────────── */
@@ -291,9 +347,9 @@ function hideLoader() {
 /* ── TOAST ────────────────────────────────────────────────────── */
 function toast(msg, type = 'info') {
   const icons = { info:'fa-circle-info', success:'fa-circle-check', warn:'fa-triangle-exclamation', error:'fa-circle-exclamation' };
-  const tc    = document.getElementById('toasts');
+  const tc = document.getElementById('toasts');
   if (!tc) return;
-  const el    = document.createElement('div');
+  const el = document.createElement('div');
   el.className = `toast t-${type}`;
   el.innerHTML = `<i class="fa-solid ${icons[type]||icons.info}" style="flex-shrink:0;margin-top:1px"></i><span>${xss(msg)}</span>`;
   tc.appendChild(el);

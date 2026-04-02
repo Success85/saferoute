@@ -7,22 +7,19 @@
 const MAP = {
   lmap:         null,
   tile:         null,
-  routeLayer:   null,   // main analyzed route — blue
-  altLayer1:    null,   // alt route A — rose/crimson
-  altLayer2:    null,   // alt route B — cyan
-  altLabel1:    null,   // score label marker for alt A
-  altLabel2:    null,   // score label marker for alt B
+  routeLayer:   null,
+  altLayer1:    null,
+  altLabel1:    null,
+  mainLabel:    null,
+  _mainGJ:      null,
   crimeMarkers: [],
   originMk:     null,
   destMk:       null,
-  tapCount:     0,
 };
 
-/* Route colors — clearly distinct, none clash with amber/green */
-const MAIN_COLOR = '#144491';  // blue  — main analyzed route
-const ALT1_COLOR = '#95b11b';  // rose  — Alt A (best)
-// const ALT2_COLOR = '#ba32be';  
-
+/* Route colors */
+const MAIN_COLOR = '#144491';
+const ALT1_COLOR = '#95b11b';
 
 /* ── INIT ─────────────────────────────────────────────────────── */
 function initMap() {
@@ -40,28 +37,53 @@ function initMap() {
 
   MAP.lmap.on('click', async e => {
     const { lat, lng } = e.latlng;
-    MAP.tapCount++;
-    if (MAP.tapCount === 1) {
-      APP.originLL = { lat, lng };
-      placePinOrigin(lat, lng);
-      const lbl = await reverseGeocode(lat, lng);
-      APP.originLabel = lbl;
-      setVal('o-inp',  lbl);
-      setVal('mo-inp', lbl);
-      setText('map-status', `Origin set: ${lbl} — tap again for destination`);
-      toast('Origin set ✓ — now tap the destination', 'info');
-      document.getElementById('map-hint').classList.add('gone');
-    } else if (MAP.tapCount >= 2) {
-      APP.destLL = { lat, lng };
-      placePinDest(lat, lng);
-      const lbl = await reverseGeocode(lat, lng);
-      APP.destLabel = lbl;
-      setVal('d-inp',  lbl);
-      setVal('md-inp', lbl);
-      MAP.tapCount = 0;
-      setText('map-status', `Destination set: ${lbl} — click ANALYZE`);
-      toast('Destination set ✓ — click ANALYZE to run', 'success');
-    }
+    const lbl = await reverseGeocode(lat, lng);
+
+    const container = document.createElement('div');
+    container.style.cssText = 'font-family:Outfit,sans-serif;padding:4px 2px;min-width:210px';
+    container.innerHTML = `
+      <div style="font-size:.78rem;font-weight:600;color:var(--text);margin-bottom:4px;line-height:1.4">${xss(lbl)}</div>
+      <div style="font-size:.7rem;color:var(--text2);margin-bottom:10px">Set this location as:</div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <button id="pick-origin" style="background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;border-radius:6px;padding:7px 12px;font-family:Outfit,sans-serif;font-size:.75rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:7px">
+          <span>📍</span> Set as Origin
+        </button>
+        <button id="pick-dest" style="background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;border:none;border-radius:6px;padding:7px 12px;font-family:Outfit,sans-serif;font-size:.75rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:7px">
+          <span>🏁</span> Set as Destination
+        </button>
+        <button id="pick-cancel" style="background:transparent;color:var(--text3);border:1px solid var(--border);border-radius:6px;padding:6px 12px;font-family:Outfit,sans-serif;font-size:.72rem;cursor:pointer">
+          Cancel
+        </button>
+      </div>`;
+
+    const popup = L.popup({ maxWidth: 260, closeButton: false })
+      .setLatLng([lat, lng])
+      .setContent(container)
+      .openOn(MAP.lmap);
+
+    setTimeout(() => {
+      document.getElementById('pick-origin')?.addEventListener('click', () => {
+        MAP.lmap.closePopup();
+        APP.originLL = { lat, lng }; APP.originLabel = lbl;
+        placePinOrigin(lat, lng);
+        setVal('o-inp', lbl); setVal('mo-inp', lbl);
+        document.getElementById('map-hint').classList.add('gone');
+        setText('map-status', `Origin set: ${lbl}`);
+        toast('Origin set ✓', 'success');
+      });
+      document.getElementById('pick-dest')?.addEventListener('click', () => {
+        MAP.lmap.closePopup();
+        APP.destLL = { lat, lng }; APP.destLabel = lbl;
+        placePinDest(lat, lng);
+        setVal('d-inp', lbl); setVal('md-inp', lbl);
+        document.getElementById('map-hint').classList.add('gone');
+        setText('map-status', `Destination set: ${lbl}`);
+        toast('Destination set ✓', 'success');
+      });
+      document.getElementById('pick-cancel')?.addEventListener('click', () => {
+        MAP.lmap.closePopup();
+      });
+    }, 50);
   });
 }
 
@@ -103,9 +125,7 @@ function makePin(letter, color) {
       </div>
       <div style="width:2px;height:10px;background:${color};opacity:.7;margin-top:-1px;border-radius:0 0 2px 2px"></div>
     </div>`,
-    iconSize:   [36, 46],
-    iconAnchor: [18, 46],
-    popupAnchor:[0, -48],
+    iconSize: [36, 46], iconAnchor: [18, 46], popupAnchor: [0, -48],
   });
 }
 
@@ -141,6 +161,8 @@ async function fetchORSRoute(origin, dest, preference) {
 /* ── DRAW MAIN ROUTE ──────────────────────────────────────────── */
 async function drawRouteORS(origin, dest) {
   if (MAP.routeLayer) { MAP.lmap.removeLayer(MAP.routeLayer); MAP.routeLayer = null; }
+  if (MAP.mainLabel)  { MAP.lmap.removeLayer(MAP.mainLabel);  MAP.mainLabel  = null; }
+  MAP._mainGJ = null;
 
   try {
     const gj    = await fetchORSRoute(origin, dest, 'recommended');
@@ -148,125 +170,121 @@ async function drawRouteORS(origin, dest) {
     const km    = (props.distance || 0).toFixed(1);
     const min   = Math.round((props.duration || 0) / 60);
 
-    // Soft glow underneath
+    // Glow layer
     L.geoJSON(gj, { style: { color: MAIN_COLOR, weight: 14, opacity: .15 } }).addTo(MAP.lmap);
 
-    // Main line on top
+    // Main route line
     MAP.routeLayer = L.geoJSON(gj, {
       style: { color: MAIN_COLOR, weight: 6, opacity: .9 },
     }).addTo(MAP.lmap);
+
+    // ── Store GeoJSON BEFORE returning so _mainRouteLabel can use it ──
+    MAP._mainGJ = gj;
 
     MAP.lmap.fitBounds(MAP.routeLayer.getBounds().pad(0.2));
     return { km, min, ok: true };
 
   } catch (err) {
     console.warn('ORS main route failed, fallback:', err.message);
+
     MAP.routeLayer = L.polyline(
       [[origin.lat, origin.lng], [dest.lat, dest.lng]],
       { color: MAIN_COLOR, weight: 4, opacity: .7, dashArray: '8,6' }
     ).addTo(MAP.lmap);
+
+    // Synthetic midpoint so label still renders on fallback
+    MAP._mainGJ = {
+      features: [{ geometry: { coordinates: [
+        [origin.lng, origin.lat],
+        [(origin.lng + dest.lng) / 2, (origin.lat + dest.lat) / 2],
+        [dest.lng, dest.lat],
+      ]}}]
+    };
+
     MAP.lmap.fitBounds(MAP.routeLayer.getBounds().pad(0.25));
     const distKm = haversine(origin.lat, origin.lng, dest.lat, dest.lng).toFixed(1);
     return { km: distKm, min: Math.round(distKm * 2), ok: false };
   }
 }
 
-/* ── DRAW ALTERNATIVE ROUTES ──────────────────────────────────── */
-/*  Alt A (rose #e11d48)  → ORS 'shortest' preference
-    Alt B (cyan #06b6d4)  → ORS 'fastest'  preference
-    Both are real ORS-calculated routes drawn identically to
-    the main route, just with dashed lines and different colors.
-    Falls back to quadratic Bézier curves if ORS quota exceeded. */
-async function drawAltRoutes(origin, dest, scoreA, scoreB) {
-  clearAltRoutes(); // always wipe previous before drawing
+/* ── DRAW SINGLE ALTERNATIVE ROUTE ───────────────────────────── */
+async function drawAltRoutes(origin, dest, scoreA) {
+  clearAltRoutes();
 
-  /* ── Alt A ─────────────────────────────────────────────────── */
   try {
-    const gjA    = await fetchORSRoute(origin, dest, 'shortest');
+    const gjA     = await fetchORSRoute(origin, dest, 'shortest');
     const coordsA = gjA.features[0].geometry.coordinates;
 
-    // Glow
     L.geoJSON(gjA, { style: { color: ALT1_COLOR, weight: 12, opacity: .13 } }).addTo(MAP.lmap);
-
     MAP.altLayer1 = L.geoJSON(gjA, {
       style: { color: ALT1_COLOR, weight: 5, opacity: .88, dashArray: '14,6' },
     }).addTo(MAP.lmap);
 
-    // Score pill at midpoint of the real route geometry
-    const midA    = coordsA[Math.floor(coordsA.length / 2)]; // [lng, lat]
-    MAP.altLabel1 = _scoreLabel(midA[1], midA[0], scoreA, ALT1_COLOR, '#fff', 'ALT A');
+    const midA    = coordsA[Math.floor(coordsA.length / 2)];
+    MAP.altLabel1 = _scoreLabel(midA[1], midA[0], scoreA, ALT1_COLOR, '#fff', 'ALT ROUTE');
 
   } catch (err) {
-    console.warn('ORS alt A failed, Bézier fallback:', err.message);
-    const pts     = _bezier(origin, dest,  0.022, 40);
+    console.warn('ORS alt route failed, Bézier fallback:', err.message);
+    const pts     = _bezier(origin, dest, 0.022, 40);
     MAP.altLayer1 = L.polyline(pts, { color: ALT1_COLOR, weight: 5, opacity: .85, dashArray: '14,6' }).addTo(MAP.lmap);
     const midA    = pts[Math.floor(pts.length / 2)];
-    MAP.altLabel1 = _scoreLabel(midA[0], midA[1], scoreA, ALT1_COLOR, '#fff', 'ALT A');
-  }
-
-  /* ── Alt B ─────────────────────────────────────────────────── */
-  try {
-    const gjB    = await fetchORSRoute(origin, dest, 'fastest');
-    const coordsB = gjB.features[0].geometry.coordinates;
-
-    L.geoJSON(gjB, { style: { color: ALT2_COLOR, weight: 12, opacity: .13 } }).addTo(MAP.lmap);
-
-    MAP.altLayer2 = L.geoJSON(gjB, {
-      style: { color: ALT2_COLOR, weight: 5, opacity: .85, dashArray: '6,10' },
-    }).addTo(MAP.lmap);
-
-    const midB    = coordsB[Math.floor(coordsB.length / 2)];
-    MAP.altLabel2 = _scoreLabel(midB[1], midB[0], scoreB, ALT2_COLOR, '#000', 'ALT B');
-
-  } catch (err) {
-    console.warn('ORS alt B failed, Bézier fallback:', err.message);
-    const pts     = _bezier(origin, dest, -0.022, 40);
-    MAP.altLayer2 = L.polyline(pts, { color: ALT2_COLOR, weight: 5, opacity: .82, dashArray: '6,10' }).addTo(MAP.lmap);
-    const midB    = pts[Math.floor(pts.length / 2)];
-    MAP.altLabel2 = _scoreLabel(midB[0], midB[1], scoreB, ALT2_COLOR, '#000', 'ALT B');
+    MAP.altLabel1 = _scoreLabel(midA[0], midA[1], scoreA, ALT1_COLOR, '#fff', 'ALT ROUTE');
   }
 }
 
 /* ── CLEAR ALT ROUTES ─────────────────────────────────────────── */
 function clearAltRoutes() {
   if (MAP.altLayer1) { MAP.lmap.removeLayer(MAP.altLayer1); MAP.altLayer1 = null; }
-  if (MAP.altLayer2) { MAP.lmap.removeLayer(MAP.altLayer2); MAP.altLayer2 = null; }
   if (MAP.altLabel1) { MAP.lmap.removeLayer(MAP.altLabel1); MAP.altLabel1 = null; }
-  if (MAP.altLabel2) { MAP.lmap.removeLayer(MAP.altLabel2); MAP.altLabel2 = null; }
 }
 
-/* ── PRIVATE HELPERS ──────────────────────────────────────────── */
-
-/* Score pill marker */
+/* ── SCORE LABELS ─────────────────────────────────────────────── */
 function _scoreLabel(lat, lng, score, bg, textColor, tag) {
   return L.marker([lat, lng], {
     icon: L.divIcon({
       className: '',
-      html: `<div style="
-        background:${bg};color:${textColor};
-        font-family:'Bebas Neue',sans-serif;font-size:12px;letter-spacing:.1em;
-        padding:3px 10px;border-radius:99px;
-        box-shadow:0 2px 10px ${bg}cc;
-        white-space:nowrap;pointer-events:none;
-        border:1.5px solid rgba(255,255,255,.35);
-      ">${score}% SAFE — ${tag}</div>`,
-      iconAnchor: [54, 10],
+      html: `<div style="display:flex;flex-direction:column;align-items:center;pointer-events:none">
+        <div style="background:${bg};color:${textColor};font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:.12em;padding:5px 14px;border-radius:6px;box-shadow:0 3px 16px rgba(0,0,0,.55),0 0 0 2px rgba(255,255,255,.25);white-space:nowrap;border:2px solid rgba(255,255,255,.6);backdrop-filter:blur(4px);display:flex;align-items:center;gap:8px">
+          <span style="background:rgba(255,255,255,.25);border-radius:4px;padding:1px 6px;font-size:11px;letter-spacing:.08em">${tag}</span>
+          <span style="font-size:16px;letter-spacing:.06em">${score}%</span>
+          <span style="font-size:10px;opacity:.85;letter-spacing:.1em">SAFE</span>
+        </div>
+        <div style="width:0;height:0;border-left:8px solid transparent;border-right:8px solid transparent;border-top:10px solid ${bg};filter:drop-shadow(0 2px 2px rgba(0,0,0,.3))"></div>
+      </div>`,
+      iconAnchor: [60, 34],
     }),
     zIndexOffset: 1000,
   }).addTo(MAP.lmap);
 }
 
-/* Quadratic Bézier curve fallback — latOffset moves the arc north (+) or south (-) */
+function _mainRouteLabel(lat, lng, score) {
+  return L.marker([lat, lng], {
+    icon: L.divIcon({
+      className: '',
+      html: `<div style="display:flex;flex-direction:column;align-items:center;pointer-events:none">
+        <div style="background:${MAIN_COLOR};color:#fff;font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:.12em;padding:5px 14px;border-radius:6px;box-shadow:0 3px 16px rgba(0,0,0,.55),0 0 0 2px rgba(255,255,255,.25);white-space:nowrap;border:2px solid rgba(255,255,255,.6);backdrop-filter:blur(4px);display:flex;align-items:center;gap:8px">
+          <span style="background:rgba(255,255,255,.2);border-radius:4px;padding:1px 6px;font-size:11px;letter-spacing:.08em">MAIN ROUTE</span>
+          <span style="font-size:16px;letter-spacing:.06em">${score}%</span>
+          <span style="font-size:10px;opacity:.85;letter-spacing:.1em">SAFE</span>
+        </div>
+        <div style="width:0;height:0;border-left:8px solid transparent;border-right:8px solid transparent;border-top:10px solid ${MAIN_COLOR};filter:drop-shadow(0 2px 2px rgba(0,0,0,.3))"></div>
+      </div>`,
+      iconAnchor: [60, 34],
+    }),
+    zIndexOffset: 1000,
+  }).addTo(MAP.lmap);
+}
+
+/* ── BÉZIER FALLBACK ──────────────────────────────────────────── */
 function _bezier(origin, dest, latOffset, steps) {
   const ctrlLat = (origin.lat + dest.lat) / 2 + latOffset;
   const ctrlLng = (origin.lng + dest.lng) / 2;
-  const pts     = [];
+  const pts = [];
   for (let i = 0; i <= steps; i++) {
-    const t  = i / steps;
-    const u  = 1 - t;
+    const t = i / steps, u = 1 - t;
     pts.push([
-      u * u * origin.lat + 2 * u * t * ctrlLat + t * t * dest.lat,
-      u * u * origin.lng + 2 * u * t * ctrlLng + t * t * dest.lng,
+      u*u*origin.lat + 2*u*t*ctrlLat + t*t*dest.lat,
+      u*u*origin.lng + 2*u*t*ctrlLng + t*t*dest.lng,
     ]);
   }
   return pts;
@@ -291,29 +309,25 @@ function renderCrimeMarkers(crimes, refDate) {
     const cat     = c.cat || classifyCrime(c.desc);
     const color   = cat === 'violent' ? '#ff3b30' : cat === 'property' ? '#ff9500' : '#5856d6';
     const ageDays = c.date ? (ref - c.date.getTime()) / 86400000 : 999;
-    const sz = ageDays <= 30 ? 9 : ageDays <= 90 ? 7 : ageDays <= 365 ? 5 : 4;
-    const op      = ageDays <= 30 ? 1  : ageDays <= 90 ? .85 : ageDays <= 365 ? .65 : .45;
+    const sz      = ageDays <= 30 ? 9 : ageDays <= 90 ? 7 : ageDays <= 365 ? 5 : 4;
+    const op      = ageDays <= 30 ? 1 : ageDays <= 90 ? .85 : ageDays <= 365 ? .65 : .45;
 
     const icon = L.divIcon({
       className: '',
       html: `<div style="width:${sz}px;height:${sz}px;border-radius:50%;background:${color};opacity:${op};border:1.5px solid rgba(255,255,255,.65);box-shadow:0 0 7px ${color}aa;cursor:pointer"></div>`,
-      iconSize:   [sz, sz],
-      iconAnchor: [sz / 2, sz / 2],
+      iconSize: [sz, sz], iconAnchor: [sz/2, sz/2],
     });
 
-    const dateF  = c.date ? c.date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) : '—';
+    const dateF  = c.date ? c.date.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric', year:'numeric' }) : '—';
     const timeF  = c.timeStr || '';
-    const sexMap = { M: 'Male', F: 'Female', X: 'Unknown' };
-    const sex    = sexMap[(c.victSex || '').toUpperCase()] || c.victSex || '';
+    const sexMap = { M:'Male', F:'Female', X:'Unknown' };
+    const sex    = sexMap[(c.victSex||'').toUpperCase()] || c.victSex || '';
     const victim = [sex, c.victAge > 0 ? `Age ${c.victAge}` : ''].filter(Boolean).join(' · ');
     const ageTxt = ageDays <= 0 ? 'Most recent' : `${Math.round(ageDays)}d before latest`;
 
     const popup = `<div class="cpop">
-      <div class="cpop-hdr">
-        <div class="cpop-dot" style="background:${color}"></div>
-        <div class="cpop-title">${xss(capWords(c.desc))}</div>
-      </div>
-      <div class="cpop-row"><i class="fa-solid fa-calendar-day"></i><span>${dateF}${timeF ? ' · ' + timeF : ''}</span></div>
+      <div class="cpop-hdr"><div class="cpop-dot" style="background:${color}"></div><div class="cpop-title">${xss(capWords(c.desc))}</div></div>
+      <div class="cpop-row"><i class="fa-solid fa-calendar-day"></i><span>${dateF}${timeF ? ' · '+timeF : ''}</span></div>
       <div class="cpop-row"><i class="fa-solid fa-hourglass-half"></i><span>${ageTxt}</span></div>
       ${victim    ? `<div class="cpop-row"><i class="fa-solid fa-person"></i><span><b>Victim:</b> ${xss(victim)}</span></div>` : ''}
       ${c.address ? `<div class="cpop-row"><i class="fa-solid fa-map-pin"></i><span>${xss(c.address)}</span></div>` : ''}
@@ -323,23 +337,22 @@ function renderCrimeMarkers(crimes, refDate) {
       ${c.status  ? `<div class="cpop-row"><i class="fa-solid fa-gavel"></i><span>${xss(c.status)}</span></div>` : ''}
     </div>`;
 
-    const mk = L.marker([c.lat, c.lng], { icon }).addTo(MAP.lmap).bindPopup(popup, { maxWidth: 260 });
-    MAP.crimeMarkers.push(mk);
+    MAP.crimeMarkers.push(L.marker([c.lat, c.lng], { icon }).addTo(MAP.lmap).bindPopup(popup, { maxWidth: 260 }));
   }
 }
 
 /* ── MAP CONTROLS ─────────────────────────────────────────────── */
 function toggleMarkers() {
   APP.showMarkers = !APP.showMarkers;
-  const btn = document.getElementById('fab-markers');
-  btn?.classList.toggle('active', APP.showMarkers);
+  document.getElementById('fab-markers')?.classList.toggle('active', APP.showMarkers);
   APP.showMarkers ? renderCrimeMarkers(APP.crimes, APP.refDate) : clearCrimeMarkers();
 }
 
 function recenter() {
   if (APP.originLL && APP.destLL) {
-    const b = L.latLngBounds([[APP.originLL.lat, APP.originLL.lng], [APP.destLL.lat, APP.destLL.lng]]);
-    MAP.lmap.fitBounds(b.pad(0.3));
+    MAP.lmap.fitBounds(L.latLngBounds(
+      [[APP.originLL.lat, APP.originLL.lng], [APP.destLL.lat, APP.destLL.lng]]
+    ).pad(0.3));
   } else {
     MAP.lmap.flyTo(CFG.LA_CENTER, 12, { duration: 1.2 });
   }
