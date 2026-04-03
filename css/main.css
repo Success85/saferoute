@@ -29,7 +29,7 @@
   --h-header: 64px;
 }
 
-[data-theme="dark"] {
+/* [data-theme="dark"] {
   --bg:        #0c0f1a;
   --bg2:       #101420;
   --bg3:       #161b2e;
@@ -47,7 +47,7 @@
   --shadow:    0 4px 24px rgba(0,0,0,.45);
   --shadow-lg: 0 20px 60px rgba(0,0,0,.7);
   --map-filter:brightness(.72) contrast(1.1) saturate(.75);
-}
+} */
 [data-theme="light"] {
   --bg:        #f0f3fa;
   --bg2:       #e6ebf5;

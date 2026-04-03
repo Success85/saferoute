@@ -88,12 +88,9 @@ function initMap() {
 }
 
 function applyTile() {
-  const dark = document.documentElement.dataset.theme === 'dark';
   if (MAP.tile) MAP.lmap.removeLayer(MAP.tile);
   MAP.tile = L.tileLayer(
-    dark
-      ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-      : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+    'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
     { subdomains: 'abcd', maxZoom: 20 }
   ).addTo(MAP.lmap);
 }

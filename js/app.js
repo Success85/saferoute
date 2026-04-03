@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     await sleep(i === 0 ? 200 : 380);
   }
 
-  const theme = localStorage.getItem('saferoute_theme') || 'dark';
+  const theme = localStorage.getItem('saferoute_theme') || 'light';
   document.documentElement.dataset.theme = theme;
 
   initMap();
@@ -141,11 +141,73 @@ function clearAll() {
 async function runAnalysis() {
   syncMob();
 
-  //  Resolve origin 
+  //  Inline security helpers for location inputs 
+  function _locBad(s) {
+    if (!s) return false;
+    const str = String(s);
+    return /<[a-z]/i.test(str)           ||  // ANY html tag
+           /<\/[a-z]/i.test(str)         ||  // closing html tag
+           /javascript\s*:/i.test(str)   ||  // js: protocol
+           /vbscript\s*:/i.test(str)     ||  // vbscript: protocol
+           /on\w+\s*=/i.test(str)        ||  // event handlers
+           /\bUNION\b.+\bSELECT\b/i.test(str) || // SQL UNION SELECT
+           /\bDROP\b.+\bTABLE\b/i.test(str)   || // SQL DROP TABLE
+           /--|\/\*/.test(str)           ||  // SQL comments
+           /\{\{|\$\{/.test(str)         ||  // template injection
+           /&#x?[0-9a-f]+;/i.test(str)  ||  // HTML entity bypass
+           /__proto__|constructor/.test(str) || // prototype pollution
+           /\.\.[\/\\]/.test(str)        ||  // path traversal
+           /\0/.test(str);                   // null bytes
+  }
+  function _locMsg(s, field) {
+    const str = String(s || '');
+    if (/<[a-z]/i.test(str) || /<\/[a-z]/i.test(str))
+      return `${field} cannot contain HTML tags. Please enter a plain street address — e.g. "Hollywood Blvd, Los Angeles".`;
+    if (/javascript\s*:|vbscript\s*:/i.test(str))
+      return `${field} contains a disallowed protocol. Please enter a plain street address.`;
+    if (/on\w+\s*=/i.test(str))
+      return `${field} contains an event handler. Please enter a plain street address only.`;
+    if (/\bUNION\b|\bDROP\b|\bSELECT\b|\bINSERT\b|\bDELETE\b/i.test(str))
+      return `${field} contains SQL keywords which are not allowed. Please enter a real Los Angeles street address.`;
+    if (/--|\/\*/.test(str))
+      return `${field} contains SQL comment sequences. Please enter a plain address.`;
+    if (/\{\{|\$\{/.test(str))
+      return `${field} contains template syntax which is not allowed. Please enter a plain address.`;
+    if (/\.\.[\/\\]/.test(str))
+      return `${field} contains a path traversal sequence. Please enter a plain address.`;
+    return `${field} contains invalid characters. Please enter a plain Los Angeles street address — e.g. "1234 Wilshire Blvd, LA".`;
+  }
+  function _locClean(s) {
+    return String(s)
+      .replace(/<[^>]*>/g, '')
+      .replace(/javascript\s*:/gi, '')
+      .replace(/vbscript\s*:/gi, '')
+      .replace(/on\w+\s*=/gi, '')
+      .replace(/(\bSELECT\b|\bDROP\b|\bUNION\b|\bINSERT\b|\bDELETE\b)/gi, '')
+      .replace(/(--|\/\*|\*\/)/g, '')
+      .replace(/\{\{[\s\S]*?\}\}/g, '')
+      .replace(/\$\{[\s\S]*?\}/g, '')
+      .replace(/&#x?[0-9a-f]+;/gi, '')
+      .replace(/\.\.[\/\\]/g, '')
+      .replace(/\0/g, '')
+      .trim().slice(0, 300);
+  }
+
+  // Resolve origin 
   if (!APP.originLL) {
-    const q = document.getElementById('o-inp')?.value.trim();
-    if (!q) {
-      showErrorModal('Missing Origin', 'Please enter an origin address.');
+    const rawQ = document.getElementById('o-inp')?.value || '';
+    if (!rawQ.trim()) {
+      showErrorModal('Missing Origin', 'Please enter an origin address or tap the map to set your starting point.');
+      return;
+    }
+    if (_locBad(rawQ)) {
+      showErrorModal('Invalid Origin', _locMsg(rawQ, 'Origin'));
+      setVal('o-inp', ''); setVal('mo-inp', '');
+      return;
+    }
+    const q = _locClean(rawQ);
+    if (q.length < 3) {
+      showErrorModal('Origin Too Short', 'Please enter a more complete address — e.g. "Hollywood Blvd, Los Angeles" or "Downtown LA".');
       return;
     }
     showLoader(true, 'Geocoding origin…');
@@ -153,7 +215,7 @@ async function runAnalysis() {
     try { res = await geocodeForward(q); } catch { res = null; }
     if (!res?.length) {
       hideLoader();
-      showErrorModal('Origin Not Found', `"${q}" could not be found in Los Angeles.\n\nTry a more specific street address, neighbourhood, or landmark name.`);
+      showErrorModal('Origin Not Found', `"${q}" could not be found in Los Angeles.\n\nPlease try:\n• A full street address: "1234 Wilshire Blvd"\n• A neighbourhood: "Hollywood" or "Westwood"\n• A landmark: "Griffith Observatory"`);
       return;
     }
     APP.originLL = res[0]; APP.originLabel = res[0].short;
@@ -161,11 +223,24 @@ async function runAnalysis() {
   }
 
   // Resolve destination
+
   if (!APP.destLL) {
-    const q = document.getElementById('d-inp')?.value.trim();
-    if (!q) {
+    const rawQ = document.getElementById('d-inp')?.value || '';
+    if (!rawQ.trim()) {
       hideLoader();
-      showErrorModal('Missing Destination', 'Please enter a destination address.');
+      showErrorModal('Missing Destination', 'Please enter a destination address or tap the map to set your destination.');
+      return;
+    }
+    if (_locBad(rawQ)) {
+      hideLoader();
+      showErrorModal('Invalid Destination', _locMsg(rawQ, 'Destination'));
+      setVal('d-inp', ''); setVal('md-inp', '');
+      return;
+    }
+    const q = _locClean(rawQ);
+    if (q.length < 3) {
+      hideLoader();
+      showErrorModal('Destination Too Short', 'Please enter a more complete address — e.g. "Venice Beach, LA" or "LAX Airport".');
       return;
     }
     showLoader(true, 'Geocoding destination…');
@@ -173,7 +248,7 @@ async function runAnalysis() {
     try { res = await geocodeForward(q); } catch { res = null; }
     if (!res?.length) {
       hideLoader();
-      showErrorModal('Destination Not Found', `"${q}" could not be found in Los Angeles.\n\nTry a more specific street address, neighbourhood, or landmark name.`);
+      showErrorModal('Destination Not Found', `"${q}" could not be found in Los Angeles.\n\nPlease try:\n• A full street address: "1234 Sunset Blvd"\n• A neighbourhood: "Venice" or "Koreatown"\n• A landmark: "Staples Center" or "Santa Monica Pier"`);
       return;
     }
     APP.destLL = res[0]; APP.destLabel = res[0].short;
@@ -210,7 +285,7 @@ async function runAnalysis() {
         ? 'Your origin is'
         : 'Your destination is';
     showErrorModal(
-      'Outside Los Angeles',
+      'Not a Valid Los Angeles Address',
       who + ' outside the area covered by LAPD crime data.\n\nThis app only analyzes routes within Los Angeles city limits. Please enter addresses within LA or any LA neighbourhood.'
     );
     return;
