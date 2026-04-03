@@ -86,19 +86,7 @@ function buildVerdict(rtScore, oRes, dRes, crimes, destLabel) {
   const rl = riskLevel(rtScore);
   const d = (destLabel || 'destination').split(',')[0];
   let title, sub;
-  // if (rtScore >= 75) {
-  //   title = `Route to ${d} is relatively safe`;
-  //   sub   = `${crimes.length} incidents in the corridor. Origin: ${oRes.score}/100 · Destination: ${dRes.score}/100. Standard precautions apply.`;
-  // } else if (rtScore >= 55) {
-  //   title = `Exercise caution on this route`;
-  //   sub   = `${crimes.length} incidents detected (${oRes.violent + dRes.violent} violent). Stay alert, especially after dark.`;
-  // } else if (rtScore >= 35) {
-  //   title = `Notable crime activity along this corridor`;
-  //   sub   = `${crimes.length} incidents — ${oRes.violent + dRes.violent} violent crimes. Consider alternate routes or travelling in daylight.`;
-  // } else {
-  //   title = `High-risk route — plan carefully`;
-  //   sub   = `${crimes.length} incidents found (${oRes.violent + dRes.violent} violent). Strongly consider alternate routes or extra precautions.`;
-  // }
+
 
   if (rtScore >= 75) {
     title = `Route to ${d} is relatively safe`;
