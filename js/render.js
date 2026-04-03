@@ -73,8 +73,8 @@ function renderScoreCards(oRes, dRes, rtScore, oLabel, dLabel) {
 function renderBadge(id, risk) { const el = document.getElementById(id); if (!el) return; el.textContent = risk.label; el.className = `sc-badge ${risk.css}`; }
 
 function renderRouteFacts(km, min, total, period) {
-  setText('rt-dist', km ? `${km} km` : '—'); setText('rt-time', min ? `${min} min` : '—');
-  setText('rt-tot', total ? `incidents in corridor` : '—'); setText('rt-per', period || '—');
+  setText('rt-dist', km ? `${km} km` : ''); setText('rt-time', min ? `${min} min` : '');
+  setText('rt-tot', total ? `incidents in corridor` : ''); setText('rt-per', period || '');
 }
 
 function renderVerdict(v, rtScore) {
@@ -94,7 +94,7 @@ function renderCases(crimes, dLat, dLng, refDate) {
   const ageDays = c => c.date ? Math.round((ref - c.date.getTime()) / 86400000) : null;
   grid.innerHTML = sorted.map((c, i) => {
     const cat = c.cat || 'other';
-    const dateF = c.date ? c.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
+    const dateF = c.date ? c.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
     const timeF = c.timeStr ? ` at ${c.timeStr}` : '';
     const sex = sexMap[(c.victSex || '').toUpperCase()] || c.victSex || null;
     const age = c.victAge > 0 ? `${c.victAge} yrs` : null;
@@ -197,7 +197,7 @@ function renderIncidents(crimes, refDate) {
       const sEl = document.getElementById('f-search');
       if (sEl) sEl.value = '';
       const el2 = document.getElementById('inc-list');
-      if (el2) el2.innerHTML = '<p class="no-data" style="color:#ef4444"><i class="fa-solid fa-shield-halved" style="margin-right:6px"></i>Search input contained invalid characters (HTML, script, or SQL). It has been cleared — please enter a plain text search term.</p>';
+      if (el2) el2.innerHTML = '<p class="no-data" style="color:#ef4444"><i class="fa-solid fa-shield-halved" style="margin-right:6px"></i>Search input contained invalid characters (HTML, script, or SQL). It has been cleared, please enter a plain text search term.</p>';
       return;
     }
     search = sanitizeSearch(rawSearch).toLowerCase();
@@ -214,7 +214,7 @@ function renderIncidents(crimes, refDate) {
   const sexMap = { M: 'Male', F: 'Female', X: 'Unknown' };
   el.innerHTML = list.map(c => {
     const cat = c.cat || 'other';
-    const dateF = c.date ? c.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
+    const dateF = c.date ? c.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
     const timeF = c.timeStr ? ' ' + c.timeStr : '';
     const sex = sexMap[(c.victSex || '').toUpperCase()] || '';
     const vict = [sex, c.victAge > 0 ? `age ${c.victAge}` : ''].filter(Boolean).join(', ');
@@ -255,7 +255,7 @@ function renderRoutes(rtScore, crimes, km, min) {
         <div class="ro-score" style="color:${MAIN_COLOR}">${rtScore}%</div>
         <div class="ro-body">
           <div class="ro-name" style="color:${MAIN_COLOR}">Your analyzed route</div>
-          <div class="ro-detail">${km !== '—' ? km + ' km' : ''} ${min !== '—' ? '· ' + min + ' min' : ''}</div>
+          <div class="ro-detail">${km !== '—' ? km + ' km' : ''} ${min !== '' ? '· ' + min + ' min' : ''}</div>
         </div>
         <span class="sc-badge ${rl.css}">${rl.label}</span>
       </div>
@@ -290,7 +290,7 @@ function renderRoutes(rtScore, crimes, km, min) {
       <div class="ro-score" style="color:${MAIN_COLOR}">${rtScore}%</div>
       <div class="ro-body">
         <div class="ro-name" style="color:${MAIN_COLOR}">Your analyzed route — not recommended</div>
-        <div class="ro-detail">${km !== '—' ? km + ' km' : ''} ${min !== '—' ? '· ' + min + ' min' : ''}</div>
+        <div class="ro-detail">${km !== '' ? km + ' km' : ''} ${min !== '' ? '· ' + min + ' min' : ''}</div>
       </div>
       <span class="sc-badge ${rl.css}">${rl.label}</span>
     </div>

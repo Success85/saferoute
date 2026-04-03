@@ -1,13 +1,13 @@
-# ═══════════════════════════════════════════════════════════════
+
 # SafeRoute LA — docker-compose.yml
 # Run with: docker-compose up -d
-# ═══════════════════════════════════════════════════════════════
+
 
 version: '3.8'
 
 services:
 
-  # ── SafeRoute LA Frontend ─────────────────────────────────────
+  # SafeRoute LA Frontend 
   saferoute-frontend:
     build:
       context: .
@@ -34,10 +34,10 @@ networks:
   saferoute-net:
     driver: bridge
 
-# ═══════════════════════════════════════════════════════════════
+# 
 # Usage:
 #   Build and start:  docker-compose up -d --build
 #   View logs:        docker-compose logs -f
 #   Stop:             docker-compose down
 #   Status:           docker-compose ps
-# ═══════════════════════════════════════════════════════════════
+# 
