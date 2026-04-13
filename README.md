@@ -7,16 +7,18 @@
 ## Live Demo
 
 ```
-http://[lb01-ip]/          ← Load Balancer (primary)
-http://[web01-ip]/safenav/ ← Web01 direct
-http://[web02-ip]/safenav/ ← Web02 direct
+https://www2.simplesuccess.tech/
+https://44.212.42.210/ - load balancece
+https://44.211.47.49/ - web-01 
+https://	3.92.183.132/  - web-02    
+
 ```
 
 ---
 
 ## What It Does
 
-SafeNav LA lets you enter an origin and destination (or tap the map) to instantly choose location:
+SafeNav LA lets you enter an origin and destination to instantly choose location:
 
 - **Draw the driving route** on an interactive Leaflet map
 - **Fetch real LAPD crime incidents** from 2024 within the corridor
@@ -318,8 +320,10 @@ SVG `<path>` elements expose `.className` as a read-only `SVGAnimatedString`. So
 ---
 
 ## Demo
-- **Video Link**: 
-- **Website Link**: [
+- **Video Link**: https://drive.google.com/file/d/1trfcLVvFc8xu4a0B6QL0_WpXBUQU19lv/view?usp=sharing
+
+ 
+- **Website Link**: https://www2.simplesuccess.tech
 
 ---
 
